@@ -1,0 +1,17 @@
+// Copiar y pegar en la consola de Firebase: Firestore Database → Reglas.
+//
+// Exige sesión iniciada (Firebase Auth) para leer o escribir cualquier cosa.
+// Ya no hace falta la regla abierta de desarrollo ahora que existen cuentas
+// reales (ver CLAUDE.md, "Próximos pasos sugeridos", paso 2).
+//
+// Todavía no distingue "dueño del documento" (ej. que un vendedor no pueda
+// editar la jornada de otro) — eso queda pendiente para cuando haya más de
+// un vendedor probando la app a la vez.
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if request.auth != null;
+    }
+  }
+}

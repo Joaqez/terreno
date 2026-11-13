@@ -1,8 +1,10 @@
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { signOut } from 'firebase/auth';
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { Card, GhostButton, PrimaryButton, Screen, Subtitle, Title } from '../components/ui';
+import { Card, GhostButton, PrimaryButton, Screen, Subtitle, TextLink, Title } from '../components/ui';
 import { colors, radius, spacing } from '../theme';
+import { auth } from '../lib/firebase';
 import { useTerrenoStore } from '../lib/store';
 import { RootStackParamList } from '../navigation/types';
 
@@ -30,6 +32,14 @@ export default function HomeScreen({ navigation }: Props) {
           </Text>
           <PrimaryButton title="Iniciar día" onPress={() => navigation.navigate('KmInicio')} />
         </View>
+
+        {vendedor.rol === 'supervisor' && (
+          <View style={{ marginTop: spacing.lg, alignItems: 'center' }}>
+            <TextLink title="Administración" onPress={() => navigation.navigate('AdminTiendas')} />
+          </View>
+        )}
+
+        <TextLink title="Cerrar sesión" tone="danger" onPress={() => signOut(auth)} />
       </Screen>
     );
   }
@@ -37,6 +47,7 @@ export default function HomeScreen({ navigation }: Props) {
   const minimas = tiendas.filter((t) => t.esMinima);
   const visitadasIds = new Set(visitas.map((v) => v.tiendaId));
   const visitadas = minimas.filter((t) => visitadasIds.has(t.id)).length;
+  const metaDelDia = vendedor.minimoDiario > 0 ? vendedor.minimoDiario : minimas.length;
   const entregas = visitas.filter((v) => v.modo === 'presencial' && v.tipo === 'venta').length;
   const mantenciones = visitas.filter((v) => v.modo === 'presencial' && v.tipo === 'mantencion').length;
 
@@ -48,7 +59,7 @@ export default function HomeScreen({ navigation }: Props) {
       <View style={styles.hero}>
         <Text style={styles.heroTitle}>Ruta en curso</Text>
         <Text style={styles.heroText}>
-          {visitadas} de {minimas.length} tiendas mínimas visitadas
+          {visitadas} de {metaDelDia} tiendas mínimas visitadas
         </Text>
         <PrimaryButton title="Ver ruta del día" onPress={() => navigation.navigate('Ruta')} />
       </View>
@@ -64,8 +75,19 @@ export default function HomeScreen({ navigation }: Props) {
         </Card>
       </View>
 
-      <View style={{ marginTop: spacing.lg }}>
+      <View style={{ marginTop: spacing.lg, gap: spacing.sm }}>
+        <GhostButton title="Tiendas de región" onPress={() => navigation.navigate('TiendasRegion')} />
         <GhostButton title="Finalizar día" onPress={() => navigation.navigate('CierreDia')} />
+      </View>
+
+      {vendedor.rol === 'supervisor' && (
+        <View style={{ marginTop: spacing.lg, alignItems: 'center' }}>
+          <TextLink title="Administración" onPress={() => navigation.navigate('AdminTiendas')} />
+        </View>
+      )}
+
+      <View style={{ marginTop: spacing.lg, alignItems: 'center' }}>
+        <TextLink title="Cerrar sesión" tone="danger" onPress={() => signOut(auth)} />
       </View>
     </Screen>
   );

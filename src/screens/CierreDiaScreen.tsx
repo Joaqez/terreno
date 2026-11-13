@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Field, PrimaryButton, Screen, Subtitle, Title } from '../components/ui';
 import { colors, radius, spacing } from '../theme';
-import { takePhoto } from '../lib/camera';
+import { useFotoConSubida } from '../lib/useFotoConSubida';
 import { useTerrenoStore } from '../lib/store';
 import { RootStackParamList } from '../navigation/types';
 
@@ -11,13 +11,13 @@ type Props = NativeStackScreenProps<RootStackParamList, 'CierreDia'>;
 
 export default function CierreDiaScreen({ navigation }: Props) {
   const { jornada, finalizarJornada } = useTerrenoStore();
-  const [fotoUri, setFotoUri] = useState<string | null>(null);
+  const { fotoUri, fotoUrl, subiendo, error, capturar } = useFotoConSubida();
   const [km, setKm] = useState('');
 
   const kmInicio = jornada?.kmInicio?.km ?? 0;
   const kmFinalNum = parseInt(km, 10);
   const recorridos = !isNaN(kmFinalNum) ? Math.max(kmFinalNum - kmInicio, 0) : null;
-  const puedeFinalizar = !!fotoUri && recorridos !== null && !isNaN(kmFinalNum);
+  const puedeFinalizar = !!fotoUrl && !subiendo && recorridos !== null && !isNaN(kmFinalNum);
 
   return (
     <Screen>
@@ -37,10 +37,7 @@ export default function CierreDiaScreen({ navigation }: Props) {
 
       <Pressable
         style={styles.capture}
-        onPress={async () => {
-          const uri = await takePhoto();
-          if (uri) setFotoUri(uri);
-        }}
+        onPress={() => capturar(`jornadas/${jornada?.id}/km-final-${Date.now()}.jpg`)}
       >
         {fotoUri ? (
           <Image source={{ uri: fotoUri }} style={styles.preview} />
@@ -49,13 +46,16 @@ export default function CierreDiaScreen({ navigation }: Props) {
         )}
       </Pressable>
 
+      {error ? <Text style={styles.errorText}>{error}</Text> : null}
+
       <Field label="Kilometraje final (km)" placeholder="Ej: 48261" keyboardType="numeric" value={km} onChangeText={setKm} />
 
       <PrimaryButton
         title="Finalizar día"
         disabled={!puedeFinalizar}
+        loading={subiendo}
         onPress={() => {
-          finalizarJornada(kmFinalNum, fotoUri!);
+          finalizarJornada(kmFinalNum, fotoUrl!);
           navigation.reset({ index: 0, routes: [{ name: 'ResumenDia' }] });
         }}
       />
@@ -81,4 +81,5 @@ const styles = StyleSheet.create({
   },
   captureText: { textAlign: 'center', color: colors.inkSoft, fontWeight: '600' },
   preview: { width: '100%', height: '100%' },
+  errorText: { color: colors.danger, fontSize: 13, marginBottom: spacing.md },
 });

@@ -19,7 +19,17 @@
       "predictiveBackGestureEnabled": false
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro",
+      "output": "single",
+      "name": "Terreno",
+      "shortName": "Terreno",
+      "lang": "es",
+      "description": "Bitácora de vendedores en ruta",
+      "themeColor": "#24625B",
+      "backgroundColor": "#FAFAF8",
+      "display": "standalone",
+      "orientation": "portrait"
     }
   }
 }

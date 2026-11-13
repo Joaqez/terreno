@@ -15,10 +15,21 @@ para reponer/vender productos y hacer mantención de nuestros exhibidores.
 Reemplaza una bitácora informal por un registro estructurado: kilometraje,
 ruta del día, y el detalle de cada visita con fotos.
 
-Usuarios: vendedores en terreno (celular, mayormente Android — validar con
-el equipo si hay que priorizar Android sobre iOS). No hay todavía una vista
-web para supervisores, pero es casi seguro que se va a pedir más adelante
-(ver "Próximos pasos").
+Usuarios: vendedores en terreno, con una mezcla de celulares Android e iOS
+(confirmado 2026-09-07) — hay que soportar ambos, no priorizar uno.
+
+**Decisión importante (2026-09-07): la app se distribuye como página web
+móvil (PWA), no como app nativa instalable.** Se evaluó EAS Build + TestFlight
+para iOS, pero eso exige una cuenta de Apple Developer Program (99 USD/año,
+recurrente) que el usuario no quiere pagar. Como el proyecto está armado con
+Expo, ya trae soporte de web integrado (`react-native-web`) — se aprovechó
+eso en vez de reescribir la app. Cada vendedor entra por navegador (Safari en
+iPhone, Chrome en Android) a la URL desplegada y usa "Agregar a pantalla de
+inicio" para tener un ícono con apariencia de app nativa, sin costo y sin
+pasar por ninguna tienda de aplicaciones. Confirmado funcionando en iPhone
+real (cámara incluida) el mismo día. Ver detalle en "Stack técnico" y
+"Próximos pasos". No hay todavía una vista web para supervisores, pero es
+casi seguro que se va a pedir más adelante (ver "Próximos pasos").
 
 ## Origen de la spec: el mockup interactivo
 
@@ -60,12 +71,92 @@ La empresa define un mínimo de tiendas que el vendedor debe visitar ese día
 sugerido simple**: numeradas por cercanía (distancia recta), sin ruteo real
 todavía. Ruteo optimizado con mapa/tiempos (Google Directions API o similar)
 quedó marcado explícitamente como **siguiente fase**, no para el MVP.
+**Actualizado 2026-09-14 — ya calcula distancia real:** `RutaScreen` usa
+`src/lib/useUbicacionActual.ts` (`expo-location`, funciona en native y en
+web) para pedir la ubicación del vendedor, y `src/lib/distancia.ts`
+(Haversine) para calcular distancia real en línea recta a cada tienda con
+`lat`/`lng` — reemplaza el `distanciaKm` fijo de antes (que sigue existiendo
+como respaldo si no hay ubicación o coordenadas). 222 de las 223 tiendas
+reales ya tienen coordenadas (`scripts/geocodificarTiendas.ts`, gratis vía
+Nominatim/OpenStreetMap — sin costo, sin API key de Google). De esas, ~55
+son aproximadas (solo el centro de la comuna, no la dirección exacta) porque
+son direcciones de carretera con kilometraje que un geocodificador no
+interpreta bien; falta 1 sola tienda (`copec-20091`) por un typo en el
+Excel original ("San Plablo" en vez de "San Pablo"), dejado pendiente a
+propósito. Esto sigue siendo la distancia en **línea recta**, no ruteo real
+por calles — eso sigue siendo el paso 8 del roadmap (Google Directions),
+todavía no implementado.
+
+**Asignación por vendedor — el campo existe, todavía no se usa para filtrar
+(2026-09-09):** el negocio es principalmente vendedores que cubren Santiago,
+con las tiendas repartidas *individualmente* entre ellos (no por comuna) —
+esa repartición real todavía no está formalizada por la empresa ("de palabra
+y memoria"), así que `Tienda.vendedorAsignadoId` existe en el modelo y ya se
+puede fijar desde el panel de administración (ver más abajo), pero
+**`iniciarJornada()` en `store.ts` todavía NO filtra por él** — sigue usando
+`tiendas.filter(t => t.esMinima)` sin distinguir vendedor. Esto es
+deliberado: como hoy casi ninguna tienda tiene `vendedorAsignadoId` fijado,
+filtrar por ese campo ahora dejaría la ruta de todos vacía, peor que el
+problema actual (todos ven las mismas tiendas de Santiago completas). Una
+vez que un supervisor haya asignado las tiendas reales desde el panel, el
+siguiente paso es cambiar ese filtro a `t.esMinima && t.vendedorAsignadoId
+=== vendedorId`.
+
+Las tiendas **fuera de Santiago** ("de región") no se visitan nunca en
+persona — se hacen seguimiento por teléfono/WhatsApp/correo. Desde
+2026-09-14 tienen su propia pantalla, `TiendasRegionScreen` (botón "Tiendas
+de región" en Home, junto a "Ver ruta del día" — requiere jornada activa
+igual que el resto). Cada tienda tiene un botón "Listo" que lleva a
+`ObservacionRegionScreen`, con un campo de texto **obligatorio** para que el
+vendedor diga qué hizo (llamó, escribió por WhatsApp, mandó un correo,
+etc.) — al confirmar, usa la misma `marcarGestionRapida()` que ya existía
+para la gestión rápida de tiendas de Santiago (mismo dato, mismo `modo:
+'rapida'` en `Visita`, sin fotos ni pregunta de stock). Como `esMinima:
+false` también la usan las tiendas que un vendedor agrega sobre la marcha
+("Nueva visita", ver abajo), se agregó `Tienda.agregadaPorVendedor?:
+boolean` para no mezclarlas — `TiendasRegionScreen` filtra por
+`!esMinima && !agregadaPorVendedor`.
 
 Cada tienda pendiente tiene un botón "Cómo llegar" que abre Waze o Google
 Maps con la dirección. Además de las tiendas mínimas, el vendedor puede
 agregar tiendas nuevas ("Nueva visita") que no vienen de la base de datos de
 la empresa — quedan marcadas como `esMinima: false` pero cuentan para el
 resumen del día igual.
+
+### Panel de administración (para supervisores)
+Agregado 2026-09-09. Vive **dentro de esta misma app** (no un proyecto
+Next.js aparte, como sugería una versión anterior de este documento) — como
+la app ya es web, no tenía sentido duplicar auth/Firestore/hosting en otro
+proyecto. Pantallas: `AdminTiendasScreen` (buscar/filtrar las 223 tiendas,
+Santiago/Región/todas) → `AdminTiendaDetalleScreen` (asignar
+`vendedorAsignadoId`, cambiar `esMinima`) y `AdminVendedoresScreen` →
+`AdminVendedorDetalleScreen` (cambiar `rol`, fijar `minimoDiario`).
+
+- **Quién es supervisor**: colección nueva `vendedores` en Firestore (doc id
+  = uid de Firebase Auth), con `{nombre, email, rol: 'vendedor' |
+  'supervisor', minimoDiario: number}`. Se crea sola con valores por defecto
+  (`rol: 'vendedor'`, `minimoDiario: 0`) la primera vez que esa cuenta inicia
+  sesión (`inicializar()` en `store.ts`). El botón "Administración" en
+  `HomeScreen` solo aparece si `vendedor.rol === 'supervisor'`.
+- **Sin seguridad real del lado del servidor todavía** — es una
+  simplificación deliberada para un equipo de 2-4 personas de confianza: el
+  botón de administración se oculta en la UI para quien no es supervisor,
+  pero `firestore.rules` sigue permitiendo escribir en `tiendas`/`vendedores`
+  a cualquier cuenta autenticada (lo necesita igual un vendedor común para
+  crear sus "Nueva visita"). Si el equipo crece o deja de ser 100% de
+  confianza, esto hay que endurecerlo.
+- **`minimoDiario`**: la meta de tiendas a visitar por día, independiente de
+  cuántas tiendas tenga asignadas un vendedor en total. `0` = sin fijar, y
+  en ese caso `HomeScreen`/`ResumenDiaScreen` usan el total de tiendas
+  `esMinima` como meta (mismo comportamiento de antes de este cambio).
+- **Primer supervisor**: como no puede haber un huevo sin la gallina (nadie
+  puede entrar al panel sin ser supervisor, y el panel es lo único que
+  cambia el rol), la primera vez se hace con un script:
+  `npm run gestionar:vendedor -- supervisor 0` (con `SEED_EMAIL`/
+  `SEED_PASSWORD` de esa cuenta ya puestos en `.env` — **nunca** como
+  argumento de línea de comandos, porque cualquier texto escrito en la
+  terminal de Claude Code queda visible en la conversación). Después de eso,
+  todo se maneja desde la app. Mismo criterio aplica a `npm run set:nombre`.
 
 ### El flujo de visita — IMPORTANTE, cambió respecto a la primera versión
 Feedback clave de la reunión del 2026-09-07: la mayoría de las visitas son
@@ -124,60 +215,174 @@ app. **No está implementado ni diseñado todavía.** Antes de construirlo:
 
 ## Stack técnico y por qué
 
-- **Expo + React Native + TypeScript**: un solo código para iOS/Android,
-  bien soportado, y es donde el asistente de código rinde mejor.
+- **Expo + React Native + TypeScript**: un solo código para iOS/Android
+  **y web**, bien soportado, y es donde el asistente de código rinde mejor.
+  El soporte web (`react-native-web`, `expo start --web` / `expo export -p
+  web`) es lo que permitió pivotear a distribuir la app como PWA (ver
+  "Usuarios" arriba) sin reescribir nada — las mismas pantallas de
+  `src/screens/` corren en el navegador tal cual.
 - **React Navigation (native-stack)**: navegación tipo stack, un `Stack.Screen`
   por pantalla del mockup. Los tipos de cada ruta están en
   `src/navigation/types.ts` — actualízalos ahí primero si una pantalla nueva
   necesita parámetros distintos.
-- **Zustand** (`src/lib/store.ts`) para estado global en memoria. Se eligió
-  por ser mínimo y fácil de leer — el `state` shape se calcó a propósito del
-  mismo objeto de estado que usaba el mockup en HTML, para que sea fácil
-  comparar. **Esto todavía no persiste nada real** — al cerrar la app se
-  pierde todo. Migrar cada acción del store a leer/escribir Firestore es el
-  trabajo pendiente más importante ahora mismo.
-- **Firebase** (`src/lib/firebase.ts`, todavía sin credenciales reales — ver
-  `.env.example`) para Auth, Firestore (datos) y Storage (fotos). Se eligió
-  Firebase sobre Supabase específicamente por su soporte offline maduro:
-  un vendedor dentro de una tienda sin señal debe poder seguir registrando
-  la visita y que se sincronice sola al recuperar conexión.
+- **Zustand** (`src/lib/store.ts`) para estado global en memoria, ya
+  conectado a Firestore (ver "Estado actual del repo"). Se eligió por ser
+  mínimo y fácil de leer — el `state` shape se calcó a propósito del mismo
+  objeto de estado que usaba el mockup en HTML, para que sea fácil comparar.
+- **Firebase** (`src/lib/firebase.ts`) para Auth, Firestore (datos) y Storage
+  (fotos, pausado — ver "Próximos pasos"). Proyecto real: `terreno-62d96`.
+  Se eligió Firebase sobre Supabase específicamente por su soporte offline
+  — aunque el SDK de JavaScript no trae persistencia real de Firestore en
+  React Native (ver "Próximos pasos" paso 5), así que hay una cola casera con
+  AsyncStorage encima (`src/lib/offline.ts`) para cubrir ese caso igual: un
+  vendedor dentro de una tienda sin señal debe poder seguir registrando la
+  visita y que se sincronice sola al recuperar conexión.
 - **expo-image-picker** (`src/lib/camera.ts`) para las fotos — abre la
-  cámara nativa directamente. Si más adelante se quiere una cámara in-app
-  con overlay o guía visual, reemplazar por `expo-camera`.
+  cámara nativa directamente en Android/iOS, y el selector de archivos con
+  cámara del navegador en web (confirmado funcionando en iPhone real). Si
+  más adelante se quiere una cámara in-app con overlay o guía visual,
+  reemplazar por `expo-camera` (nativo only, no serviría en la versión web).
+- **Firebase Hosting**: aloja el build web (`dist/`, generado con `npm run
+  build:web`). Desplegar con `npm run deploy:web`. URL pública:
+  https://terreno-62d96.web.app
+  **Importante — no usar `firebase login` para desplegar**: el login normal
+  de `firebase-tools` (OAuth de usuario) resultó poco confiable en esta
+  máquina (2026-09-08) — el token de acceso vence a la hora y el refresh
+  falla con error 400 de Google, y aunque se reintentó el login varias
+  veces, `firebase-tools` seguía prefiriendo la sesión vieja rota antes que
+  cualquier otra credencial. La solución fue usar una **cuenta de servicio**:
+  `deploy:web` ya carga `GOOGLE_APPLICATION_CREDENTIALS` desde `.env`
+  (vía `dotenv-cli`) apuntando a una clave JSON generada en Firebase console
+  → Configuración del proyecto → Cuentas de servicio → Generar nueva clave
+  privada. Esa clave se guarda **fuera del repo**, en
+  `~/.secrets/terreno/service-account.json` (no está en `.env.example` con
+  valor real por lo mismo). Si en algún momento hay que generar una clave
+  nueva, la política de organización "Disable service account key creation"
+  puede estar bloqueándolo — hay que anularla para este proyecto en Google
+  Cloud Console → IAM y administración → Políticas de la organización.
 
 ## Estado actual del repo (para no reinventar lo que ya existe)
 
 - Todas las pantallas del mockup están construidas y navegables end-to-end
   en `src/screens/`, con UI real (no son wireframes) usando los tokens de
   `src/theme/index.ts` (misma paleta que el mockup en HTML).
-- Los datos son de ejemplo (`src/data/mockData.ts`, mismas 4 tiendas que el
-  mockup) y el estado vive solo en memoria vía Zustand.
-- No hay autenticación real todavía — `LoginScreen` navega directo con el
-  vendedor de ejemplo.
+- `src/lib/store.ts` ya lee/escribe Firestore (proyecto `terreno-62d96`) en
+  vez de solo memoria — cada acción actualiza el estado local al instante y
+  persiste en paralelo sin bloquear la UI. `src/data/mockData.ts` (las mismas
+  4 tiendas del mockup) ahora solo se usa para sembrar Firestore la primera
+  vez (`npm run seed:tiendas`), no como fuente de datos en runtime — esas 4
+  tiendas de prueba (`t1`-`t4`) se dieron de baja el 2026-09-09 al cargar
+  datos reales.
+- **223 tiendas reales cargadas** (2026-09-09) — Shell, Aramco y Copec
+  ("Pronto"), filtradas por STATUS "OK" (implementadas; se ignoraron las
+  "NUEVA"/"NUEVO", tiendas por aperturar) desde un Excel consolidado que la
+  empresa maneja. 131 son de la Región Metropolitana (`esMinima: true`), 92
+  son de región (`esMinima: false` — ver la nota en "Ruta del día" sobre por
+  qué no aparecen en ninguna pantalla todavía). Faltan las tiendas Copec
+  "Franquicias" (376 filas, todas en estado "Nueva" — ninguna implementada
+  aún) y no hay coordenadas (lat/lng) para ninguna tienda, solo dirección y
+  comuna de texto. El importador (`scripts/importarTiendas.ts`, `npm run
+  importar:tiendas -- "ruta\al\excel.xlsx"`) es re-ejecutable — usa IDs
+  estables (`shell-809`, `aramco-9225`, `copec-60288`, etc.) armados desde
+  el código interno de cada cadena, así que correrlo de nuevo con un Excel
+  actualizado actualiza en vez de duplicar. Se agregó `'Estación de
+  servicio'` a `TipoNegocio` (`src/types/index.ts`) para estas tiendas.
+- **Panel de administración** (2026-09-09) — ver la sección "Panel de
+  administración" arriba para el detalle. Vive dentro de esta misma app,
+  gatillado por `vendedor.rol === 'supervisor'` (colección `vendedores`
+  nueva en Firestore). Permite asignar `vendedorAsignadoId` por tienda y
+  fijar `minimoDiario` por vendedor, pero `iniciarJornada()` todavía no
+  filtra por esa asignación (ver la nota en "Ruta del día").
+- Autenticación real con Firebase Auth (`LoginScreen`, correo/contraseña) —
+  las cuentas se crean a mano en la consola de Firebase, no hay
+  auto-registro. El "nombre a mostrar" hay que fijarlo por código
+  (`npm run set:nombre`) porque la consola de Firebase no tiene un campo
+  editable para eso.
+- Las reglas de Firestore (`firestore.rules`, en la raíz del repo) exigen
+  sesión iniciada (`request.auth != null`) pero todavía no distinguen dueño
+  del documento.
+- Subida de fotos a Firebase Storage funcionando (confirmado end-to-end
+  2026-09-08: kilometraje inicio/final y foto antes/después de cada visita
+  se suben apenas se toman, no al guardar). `src/lib/storage.ts` +
+  `src/lib/useFotoConSubida.ts` (hook compartido por las 4 pantallas de
+  foto) + `storage.rules` (mismo criterio que `firestore.rules`). Los
+  campos `fotoAntesUrl`/`fotoDespuesUrl`/`kmInicio.fotoUrl`/`kmFinal.fotoUrl`
+  en Firestore ya son URLs reales de `firebasestorage.googleapis.com`, no
+  URIs locales. Nota de la versión web: `Alert.alert` de React Native es un
+  no-op en `react-native-web` — los errores de subida se muestran como texto
+  en pantalla (`error` del hook), no con `Alert.alert`.
+- Cola offline casera (`src/lib/offline.ts`) para cubrir lo que el SDK de
+  Firestore no soporta en React Native (ver "Stack técnico"): cachea
+  tiendas/jornada/visitas en `AsyncStorage` para que abrir la app sin señal
+  muestre algo en vez de spinner infinito, y guarda cada escritura en disco
+  antes de intentarla para que sobreviva si la app se cierra sin señal
+  (`reintentarPendientes()` se corre al iniciar sesión). **Bug real
+  encontrado y arreglado 2026-09-15**: la caché no tiene fecha — si al
+  loguearse Firestore confirma que no hay jornada para hoy pero la caché
+  tenía una de un día anterior, `inicializar()` en `store.ts` ahora limpia
+  `jornada`/`visitas` explícitamente en ese caso (antes se quedaban las del
+  día viejo, incluidas visitas ya hechas, como si fueran de hoy).
+- **La app se distribuye como web (PWA), no como app nativa instalable** —
+  ver la decisión en "Usuarios" arriba. Desplegada en
+  https://terreno-62d96.web.app vía Firebase Hosting. Config relevante:
+  `app.json` (bloque `web`), `public/index.html` (plantilla eyectada con
+  `npx expo customize public/index.html`, con los meta tags de Apple para
+  modo pantalla completa), `public/manifest.json`, `firebase.json` +
+  `.firebaserc`. No se han generado los proyectos nativos (`/ios`, `/android`
+  no existen) y no hace falta para el plan actual — Expo Go solo se usa para
+  probar durante desarrollo (`npm run start`/`npm run android`), no es la
+  vía de distribución a los vendedores.
 - Las dependencias se instalaron con `npm install` en vez de
   `npx expo install` porque el sandbox donde se generó este repo no tenía
   acceso a la API de compatibilidad de Expo. Antes de la primera vez que
   alguien corra esto con internet normal, conviene ejecutar
   `npx expo install --check` y corregir cualquier versión que no calce con
   el SDK de Expo instalado.
-- No se han generado los proyectos nativos (`/ios`, `/android` no existen
-  todavía) — se está trabajando 100% con Expo Go / Expo Dev Client.
 
 ## Próximos pasos sugeridos (en orden)
 
-1. Crear el proyecto de Firebase real, completar `.env` (nunca commitear
+1. ✅ Crear el proyecto de Firebase real, completar `.env` (nunca commitear
    ese archivo), y reemplazar las acciones de `src/lib/store.ts` para que
-   lean/escriban Firestore en vez de solo memoria.
-2. Autenticación real con Firebase Auth.
-3. Subida de fotos a Firebase Storage (ahora mismo `fotoUri` queda como URI
-   local del dispositivo, nunca se sube a ningún lado).
-4. Persistencia offline (revisar `enableIndexedDbPersistence` / el soporte
-   offline nativo de Firestore para React Native).
-5. Panel web simple para supervisores (probablemente fuera de este repo,
-   como un proyecto Next.js aparte que lea la misma base de Firestore).
-6. Integración con Bsale (ver sección arriba).
-7. Ruteo optimizado real para "Ruta del día" (Google Directions/Distance
-   Matrix API), si el equipo decide que vale la pena el costo/complejidad.
+   lean/escriban Firestore en vez de solo memoria. (Hecho 2026-09-07 —
+   proyecto `terreno-62d96`, región `southamerica-west1`.)
+2. ✅ Autenticación real con Firebase Auth. (Hecho 2026-09-07 — cuentas se
+   crean a mano en la consola, sin auto-registro; ver `LoginScreen.tsx`.)
+3. ✅ Subida de fotos a Firebase Storage. (Hecho 2026-09-08 — usuario activó
+   Blaze; confirmado end-to-end con fotos reales subiendo y visibles en
+   Firestore/Storage. Ver detalle en "Estado actual del repo".)
+4. ✅ Distribución a los vendedores sin depender de Expo Go/tu laptop.
+   (Hecho 2026-09-07 — pero **no** como se planeaba originalmente: en vez de
+   EAS Build + Apple Developer Program [99 USD/año], se pivoteó a distribuir
+   la app como página web/PWA, gratis, en https://terreno-62d96.web.app. Ver
+   la decisión completa en "Usuarios" y "Stack técnico" arriba. Confirmado
+   funcionando en iPhone real, cámara incluida.)
+5. ✅ Persistencia offline. (Hecho 2026-09-07 — opción elegida: cola casera
+   con AsyncStorage, `src/lib/offline.ts`, ver "Estado actual del repo".
+   **Importante para quien retome esto**: el SDK de Firebase para JavaScript
+   NO soporta persistencia offline real de Firestore en React Native
+   [`enableIndexedDbPersistence` depende de IndexedDb, que no existe en el
+   motor JS de RN/Hermes] — esto se descubrió el mismo día y contradice lo
+   que este documento sugería antes. La alternativa no elegida era migrar a
+   `@react-native-firebase`, que exige dejar Expo Go — ya no aplica de todas
+   formas ahora que la distribución es web, donde Firestore sí soporta
+   IndexedDb nativo si en algún momento se quisiera usar en vez de la cola.)
+6. ✅ Panel de administración para supervisores. (Hecho 2026-09-09 — dentro
+   de este mismo repo, no un proyecto Next.js aparte como se planeaba antes;
+   ver la sección "Panel de administración" arriba.) **Falta el siguiente
+   paso real**: que un supervisor asigne las 131 tiendas de Santiago a los
+   vendedores reales desde el panel, y recién ahí cambiar el filtro de
+   `iniciarJornada()` para que use esa asignación (hoy sigue mostrando todas
+   las tiendas de Santiago a cualquier vendedor).
+7. Integración con Bsale (ver sección arriba).
+8. ✅ (parcial) Distancia real en "Ruta del día" — la versión gratis (GPS del
+   vendedor + distancia en línea recta, sin costo) está hecha, ver la nota
+   en "Ruta del día" arriba. Lo que sigue pendiente y sí tiene costo es el
+   **ruteo optimizado real** (Google Directions/Distance Matrix API — orden
+   considerando calles/tráfico reales, no línea recta), si el equipo decide
+   que vale la pena.
+9. ✅ Gestión de las 92 tiendas de región. (Hecho 2026-09-14 —
+   `TiendasRegionScreen` + `ObservacionRegionScreen`, ver la nota sobre
+   tiendas de región en "Ruta del día" arriba para el detalle.)
 
 ## Cómo darle feedback a este proyecto
 

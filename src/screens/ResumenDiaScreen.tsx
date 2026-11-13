@@ -1,19 +1,18 @@
-import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { signOut } from 'firebase/auth';
 import React from 'react';
 import { FlatList, StyleSheet, Text, View } from 'react-native';
 import { Badge, Card, GhostButton, Screen, Subtitle, Title } from '../components/ui';
 import { colors, spacing } from '../theme';
+import { auth } from '../lib/firebase';
 import { useTerrenoStore } from '../lib/store';
-import { RootStackParamList } from '../navigation/types';
 
-type Props = NativeStackScreenProps<RootStackParamList, 'ResumenDia'>;
-
-export default function ResumenDiaScreen({ navigation }: Props) {
-  const { jornada, tiendas, visitas } = useTerrenoStore();
+export default function ResumenDiaScreen() {
+  const { jornada, tiendas, visitas, vendedor } = useTerrenoStore();
 
   const minimas = tiendas.filter((t) => t.esMinima);
   const visitadasIds = new Set(visitas.map((v) => v.tiendaId));
   const visitadas = minimas.filter((t) => visitadasIds.has(t.id)).length;
+  const metaDelDia = vendedor.minimoDiario > 0 ? vendedor.minimoDiario : minimas.length;
   const ventas = visitas.filter((v) => v.modo === 'presencial' && v.tipo === 'venta').length;
   const mantenciones = visitas.filter((v) => v.modo === 'presencial' && v.tipo === 'mantencion').length;
   const km = jornada?.kmFinal && jornada?.kmInicio ? jornada.kmFinal.km - jornada.kmInicio.km : 0;
@@ -21,19 +20,11 @@ export default function ResumenDiaScreen({ navigation }: Props) {
 
   return (
     <Screen>
-      <Title>Resumen del día</Title>
-      <Subtitle>
-        {new Date().toLocaleDateString('es-CL', { weekday: 'long', day: 'numeric', month: 'long' })}
-      </Subtitle>
-
-      <View style={styles.statGrid}>
-        <Stat num={`${visitadas}/${minimas.length}`} lbl="Tiendas mínimas" />
-        <Stat num={String(km)} lbl="Km recorridos" />
-        <Stat num={String(ventas)} lbl="Ventas" />
-        <Stat num={String(mantenciones)} lbl="Mantenciones" />
-      </View>
-
-      <Text style={styles.sectionLabel}>Visitas del día</Text>
+      {/* Todo el contenido va dentro de este único FlatList (con header/footer)
+          en vez de tener texto suelto después de la lista — así toda la
+          pantalla tiene scroll, no solo las filas de "Visitas del día". Con
+          131 tiendas reales, el bloque de "Sin visitar" puede ser larguísimo
+          y sin esto el botón de "Cerrar sesión" quedaba inalcanzable. */}
       <FlatList
         data={visitas}
         keyExtractor={(v) => v.id}
@@ -52,16 +43,36 @@ export default function ResumenDiaScreen({ navigation }: Props) {
             </View>
           );
         }}
+        ListHeaderComponent={
+          <>
+            <Title>Resumen del día</Title>
+            <Subtitle>
+              {new Date().toLocaleDateString('es-CL', { weekday: 'long', day: 'numeric', month: 'long' })}
+            </Subtitle>
+
+            <View style={styles.statGrid}>
+              <Stat num={`${visitadas}/${metaDelDia}`} lbl="Tiendas mínimas" />
+              <Stat num={String(km)} lbl="Km recorridos" />
+              <Stat num={String(ventas)} lbl="Ventas" />
+              <Stat num={String(mantenciones)} lbl="Mantenciones" />
+            </View>
+
+            <Text style={styles.sectionLabel}>Visitas del día</Text>
+          </>
+        }
         ListEmptyComponent={<Text style={styles.empty}>Aún no registras visitas hoy.</Text>}
+        ListFooterComponent={
+          <>
+            {pendientes.length > 0 && (
+              <Text style={styles.pendientes}>Sin visitar: {pendientes.map((t) => t.nombre).join(', ')}</Text>
+            )}
+            <View style={{ marginTop: spacing.xl, marginBottom: spacing.xl }}>
+              <GhostButton title="Cerrar sesión" onPress={() => signOut(auth)} />
+            </View>
+          </>
+        }
+        contentContainerStyle={{ paddingBottom: 20 }}
       />
-
-      {pendientes.length > 0 && (
-        <Text style={styles.pendientes}>Sin visitar: {pendientes.map((t) => t.nombre).join(', ')}</Text>
-      )}
-
-      <View style={{ marginTop: spacing.xl }}>
-        <GhostButton title="Cerrar sesión" onPress={() => navigation.reset({ index: 0, routes: [{ name: 'Login' }] })} />
-      </View>
     </Screen>
   );
 }

@@ -1,9 +1,11 @@
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import React, { useMemo, useState } from 'react';
-import { Alert, FlatList, Linking, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { FlatList, Linking, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Badge, Card, Field, PrimaryButton, Screen, Subtitle, TextLink, Title } from '../components/ui';
 import { colors, radius, spacing } from '../theme';
+import { calcularDistanciaKm } from '../lib/distancia';
 import { useTerrenoStore } from '../lib/store';
+import { useUbicacionActual } from '../lib/useUbicacionActual';
 import { RootStackParamList } from '../navigation/types';
 import { Tienda } from '../types';
 
@@ -11,11 +13,23 @@ type Props = NativeStackScreenProps<RootStackParamList, 'Ruta'>;
 
 export default function RutaScreen({ navigation }: Props) {
   const { tiendas, visitas, jornada, marcarGestionRapida } = useTerrenoStore();
+  const miUbicacion = useUbicacionActual();
   const [tiendaComoLlegar, setTiendaComoLlegar] = useState<Tienda | null>(null);
+  const [errorComoLlegar, setErrorComoLlegar] = useState<string | null>(null);
   const [tiendaRapida, setTiendaRapida] = useState<Tienda | null>(null);
   const [motivoRapida, setMotivoRapida] = useState('');
 
   const visitadasIds = useMemo(() => new Set(visitas.map((v) => v.tiendaId)), [visitas]);
+
+  // Distancia real en línea recta desde la ubicación actual, si la tienda
+  // tiene coordenadas y el navegador dio el permiso; si no, cae de vuelta al
+  // `distanciaKm` fijo que tenga guardado (o null si tampoco hay eso).
+  function distanciaDe(t: Tienda): number | null {
+    if (miUbicacion && t.lat != null && t.lng != null) {
+      return calcularDistanciaKm(miUbicacion.lat, miUbicacion.lng, t.lat, t.lng);
+    }
+    return t.distanciaKm;
+  }
 
   const rutaTiendas = (jornada?.tiendaIds ?? [])
     .map((id) => tiendas.find((t) => t.id === id))
@@ -27,16 +41,29 @@ export default function RutaScreen({ navigation }: Props) {
   // Orden sugerido simple: pendientes ordenadas por distancia ascendente.
   const pendientesOrdenadas = [...asignadas]
     .filter((t) => !visitadasIds.has(t.id))
-    .sort((a, b) => (a.distanciaKm ?? 0) - (b.distanciaKm ?? 0));
+    .sort((a, b) => (distanciaDe(a) ?? 0) - (distanciaDe(b) ?? 0));
   const ordenPorTienda = new Map(pendientesOrdenadas.map((t, i) => [t.id, i + 1]));
 
-  function abrirComoLlegar(app: 'waze' | 'maps') {
+  // La lista que se muestra debe seguir ese mismo orden — antes se mostraba
+  // `asignadas` sin ordenar (el orden en que Firestore las devuelve), así
+  // que el número "1, 2, 3..." de cada tarjeta no coincidía con su posición
+  // real en la lista. Las ya visitadas van al final, en cualquier orden.
+  const asignadasOrdenadas = [...pendientesOrdenadas, ...asignadas.filter((t) => visitadasIds.has(t.id))];
+
+  async function abrirComoLlegar(app: 'waze' | 'maps') {
     if (!tiendaComoLlegar) return;
+    setErrorComoLlegar(null);
     const destino = encodeURIComponent(`${tiendaComoLlegar.direccion}, ${tiendaComoLlegar.comuna}`);
     const url =
       app === 'waze' ? `https://waze.com/ul?q=${destino}&navigate=yes` : `https://www.google.com/maps/dir/?api=1&destination=${destino}`;
-    setTiendaComoLlegar(null);
-    Linking.openURL(url).catch(() => Alert.alert('No se pudo abrir la app de mapas'));
+    try {
+      await Linking.openURL(url);
+      setTiendaComoLlegar(null);
+    } catch {
+      // Alert.alert no muestra nada en web (react-native-web lo deja como
+      // no-op) — el error se muestra como texto dentro del mismo modal.
+      setErrorComoLlegar('No se pudo abrir la app de mapas.');
+    }
   }
 
   function confirmarRapida() {
@@ -72,7 +99,7 @@ export default function RutaScreen({ navigation }: Props) {
                 <Badge tone="pending">Pendiente</Badge>
               )}
               {orden === 1 && !visitada ? <Badge tone="accent">Siguiente parada</Badge> : null}
-              {t.distanciaKm != null ? <Text style={styles.dist}>{t.distanciaKm.toFixed(1)} km</Text> : null}
+              {distanciaDe(t) != null ? <Text style={styles.dist}>{distanciaDe(t)!.toFixed(1)} km</Text> : null}
             </View>
             {gestionRapida ? <Text style={styles.motivo}>“{visita?.motivoGestionRapida}”</Text> : null}
           </View>
@@ -81,7 +108,13 @@ export default function RutaScreen({ navigation }: Props) {
         {!visitada && (
           <>
             <View style={styles.actionsRow}>
-              <Pressable style={styles.btnGhostSm} onPress={() => setTiendaComoLlegar(t)}>
+              <Pressable
+                style={styles.btnGhostSm}
+                onPress={() => {
+                  setErrorComoLlegar(null);
+                  setTiendaComoLlegar(t);
+                }}
+              >
                 <Text style={styles.btnGhostSmText}>Cómo llegar</Text>
               </Pressable>
               <Pressable
@@ -103,12 +136,14 @@ export default function RutaScreen({ navigation }: Props) {
       <Title>Ruta del día</Title>
       <Subtitle>
         {pendientesOrdenadas.length
-          ? `Ruta sugerida desde ${pendientesOrdenadas[0].nombre} (${pendientesOrdenadas[0].distanciaKm?.toFixed(1)} km)`
+          ? `Ruta sugerida desde ${pendientesOrdenadas[0].nombre}${
+              distanciaDe(pendientesOrdenadas[0]) != null ? ` (${distanciaDe(pendientesOrdenadas[0])!.toFixed(1)} km)` : ''
+            }`
           : '¡Ruta mínima completa!'}
       </Subtitle>
 
       <FlatList
-        data={[...asignadas, ...creadas]}
+        data={[...asignadasOrdenadas, ...creadas]}
         keyExtractor={(t) => t.id}
         renderItem={({ item }) => renderTienda(item)}
         ListHeaderComponent={<Text style={styles.sectionLabel}>Tiendas asignadas</Text>}
@@ -126,17 +161,32 @@ export default function RutaScreen({ navigation }: Props) {
       </Pressable>
 
       {/* Modal: cómo llegar */}
-      <Modal visible={!!tiendaComoLlegar} transparent animationType="slide" onRequestClose={() => setTiendaComoLlegar(null)}>
+      <Modal
+        visible={!!tiendaComoLlegar}
+        transparent
+        animationType="slide"
+        onRequestClose={() => {
+          setTiendaComoLlegar(null);
+          setErrorComoLlegar(null);
+        }}
+      >
         <View style={styles.sheetOverlay}>
           <View style={styles.sheet}>
             <Text style={styles.sheetTitle}>Cómo llegar a {tiendaComoLlegar?.nombre}</Text>
+            {errorComoLlegar ? <Text style={styles.errorText}>{errorComoLlegar}</Text> : null}
             <Pressable style={styles.sheetOption} onPress={() => abrirComoLlegar('waze')}>
               <Text style={styles.sheetOptionText}>Abrir en Waze</Text>
             </Pressable>
             <Pressable style={styles.sheetOption} onPress={() => abrirComoLlegar('maps')}>
               <Text style={styles.sheetOptionText}>Abrir en Google Maps</Text>
             </Pressable>
-            <Pressable onPress={() => setTiendaComoLlegar(null)} style={{ marginTop: spacing.sm, alignItems: 'center' }}>
+            <Pressable
+              onPress={() => {
+                setTiendaComoLlegar(null);
+                setErrorComoLlegar(null);
+              }}
+              style={{ marginTop: spacing.sm, alignItems: 'center' }}
+            >
               <Text style={{ color: colors.inkSoft, fontWeight: '600' }}>Cerrar</Text>
             </Pressable>
           </View>
@@ -206,6 +256,7 @@ const styles = StyleSheet.create({
   sheetOverlay: { flex: 1, backgroundColor: 'rgba(15,25,22,0.42)', justifyContent: 'flex-end' },
   sheet: { backgroundColor: colors.bgElevated, borderTopLeftRadius: radius.lg, borderTopRightRadius: radius.lg, padding: spacing.xl },
   sheetTitle: { fontWeight: '700', fontSize: 15.5, marginBottom: spacing.md, color: colors.ink },
+  errorText: { color: colors.danger, fontSize: 13, marginBottom: spacing.md },
   sheetOption: { paddingVertical: spacing.md, borderBottomWidth: 1, borderBottomColor: colors.border },
   sheetOptionText: { fontWeight: '600', fontSize: 14, color: colors.ink },
 });

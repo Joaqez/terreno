@@ -1,7 +1,9 @@
+import { Platform } from 'react-native';
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getFirestore } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
-import { getAuth } from 'firebase/auth';
+import { getReactNativePersistence, initializeAuth, getAuth } from 'firebase/auth';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 /**
  * Configuración de Firebase.
@@ -26,6 +28,26 @@ const firebaseConfig = {
 };
 
 export const firebaseApp = getApps().length ? getApp() : initializeApp(firebaseConfig);
-export const auth = getAuth(firebaseApp);
+
+/**
+ * `initializeAuth` con `getReactNativePersistence` es obligatorio en Android/
+ * iOS nativo: sin esto, `getAuth()` guarda la sesión solo en memoria y el
+ * vendedor tendría que volver a iniciar sesión cada vez que cierra la app.
+ * En web no hace falta — `getAuth()` ya persiste solo en el navegador
+ * (localStorage/IndexedDb) sin configuración extra.
+ * `initializeAuth` solo se puede llamar una vez por app — si el Fast Refresh
+ * de Expo vuelve a ejecutar este módulo, usamos la instancia ya creada.
+ */
+export const auth = (() => {
+  if (Platform.OS === 'web') {
+    return getAuth(firebaseApp);
+  }
+  try {
+    return initializeAuth(firebaseApp, { persistence: getReactNativePersistence(AsyncStorage) });
+  } catch {
+    return getAuth(firebaseApp);
+  }
+})();
+
 export const db = getFirestore(firebaseApp);
 export const storage = getStorage(firebaseApp);

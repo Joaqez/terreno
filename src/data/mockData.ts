@@ -1,16 +1,10 @@
-import { Tienda, Vendedor } from '../types';
+import { Tienda } from '../types';
 
 /**
- * Datos de ejemplo para desarrollar sin depender todavía de Firebase / Bsale.
+ * Tiendas de ejemplo para sembrar Firestore (scripts/seedTiendas.ts).
  * Mismos locales que se usaron en el mockup interactivo, para que la demo
  * en el celular se sienta igual a lo que ya se validó con el equipo.
  */
-
-export const vendedorDemo: Vendedor = {
-  id: 'v1',
-  nombre: 'Camila Rojas',
-  email: 'camila.rojas@distribuidoraandina.cl',
-};
 
 export const tiendasDemo: Tienda[] = [
   {

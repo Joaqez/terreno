@@ -12,4 +12,10 @@ export type RootStackParamList = {
   VisitaRegistrada: { tiendaId: string };
   CierreDia: undefined;
   ResumenDia: undefined;
+  AdminTiendas: undefined;
+  AdminTiendaDetalle: { tiendaId: string };
+  AdminVendedores: undefined;
+  AdminVendedorDetalle: { vendedorId: string };
+  TiendasRegion: undefined;
+  ObservacionRegion: { tiendaId: string };
 };

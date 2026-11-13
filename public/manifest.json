@@ -1,0 +1,14 @@
+{
+  "name": "Terreno",
+  "short_name": "Terreno",
+  "description": "Bitácora de vendedores en ruta",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#FAFAF8",
+  "theme_color": "#24625B",
+  "orientation": "portrait",
+  "icons": [
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

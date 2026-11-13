@@ -1,9 +1,9 @@
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import { Image, Pressable, StyleSheet, Text } from 'react-native';
 import { PrimaryButton, Screen, Subtitle, Title } from '../components/ui';
 import { colors, radius, spacing } from '../theme';
-import { takePhoto } from '../lib/camera';
+import { useFotoConSubida } from '../lib/useFotoConSubida';
 import { useTerrenoStore } from '../lib/store';
 import { RootStackParamList } from '../navigation/types';
 
@@ -11,9 +11,9 @@ type Props = NativeStackScreenProps<RootStackParamList, 'FotoAntes'>;
 
 export default function FotoAntesScreen({ navigation, route }: Props) {
   const { tiendaId } = route.params;
-  const { tiendas, iniciarBorrador, actualizarBorrador, borrador } = useTerrenoStore();
+  const { tiendas, jornada, iniciarBorrador, actualizarBorrador, borrador } = useTerrenoStore();
   const tienda = tiendas.find((t) => t.id === tiendaId);
-  const [fotoUri, setFotoUri] = useState<string | null>(null);
+  const { fotoUri, fotoUrl, subiendo, error, capturar } = useFotoConSubida();
 
   useEffect(() => {
     // Empieza un borrador nuevo cada vez que se entra a esta pantalla desde la ruta.
@@ -30,10 +30,7 @@ export default function FotoAntesScreen({ navigation, route }: Props) {
 
       <Pressable
         style={styles.capture}
-        onPress={async () => {
-          const uri = await takePhoto();
-          if (uri) setFotoUri(uri);
-        }}
+        onPress={() => capturar(`jornadas/${jornada?.id}/visitas/${tiendaId}/antes-${Date.now()}.jpg`)}
       >
         {fotoUri ? (
           <Image source={{ uri: fotoUri }} style={styles.preview} />
@@ -42,11 +39,14 @@ export default function FotoAntesScreen({ navigation, route }: Props) {
         )}
       </Pressable>
 
+      {error ? <Text style={styles.errorText}>{error}</Text> : null}
+
       <PrimaryButton
         title="Continuar"
-        disabled={!fotoUri}
+        disabled={!fotoUrl || subiendo}
+        loading={subiendo}
         onPress={() => {
-          actualizarBorrador({ fotoAntesUrl: fotoUri! });
+          actualizarBorrador({ fotoAntesUrl: fotoUrl! });
           navigation.navigate('TipoVisita', { tiendaId });
         }}
       />
@@ -68,4 +68,5 @@ const styles = StyleSheet.create({
   },
   captureText: { textAlign: 'center', color: colors.inkSoft, fontWeight: '600', paddingHorizontal: spacing.lg },
   preview: { width: '100%', height: '100%' },
+  errorText: { color: colors.danger, fontSize: 13, marginBottom: spacing.md },
 });
