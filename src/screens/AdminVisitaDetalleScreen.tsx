@@ -11,8 +11,9 @@ type Props = NativeStackScreenProps<RootStackParamList, 'AdminVisitaDetalle'>;
 
 export default function AdminVisitaDetalleScreen({ navigation, route }: Props) {
   const { visitaId } = route.params;
-  const { tiendas, visitasAdmin, vendedoresDisponibles, cargarVendedores } = useTerrenoStore();
+  const { tiendas, visitasAdmin, vendedoresDisponibles, cargarVendedores, jefesTienda } = useTerrenoStore();
   const visita = visitasAdmin.find((v) => v.id === visitaId);
+  const jefe = visita?.jefeTiendaId ? jefesTienda.find((j) => j.id === visita.jefeTiendaId) : undefined;
 
   useEffect(() => {
     if (!vendedoresDisponibles.length) cargarVendedores();
@@ -49,6 +50,11 @@ export default function AdminVisitaDetalleScreen({ navigation, route }: Props) {
           <Linea etiqueta="Vendedor" valor={vendedor?.nombre ?? '—'} />
           <Linea etiqueta="Fecha" valor={formatearFecha(visita.horaInicio)} />
           <Linea etiqueta="Horario" valor={`${formatearHora(visita.horaInicio)} – ${formatearHora(visita.horaFin)}`} />
+          {visita.modo === 'presencial' ? (
+            <Linea etiqueta="Jefe de tienda" valor={jefe ? jefe.nombre : (visita.jefeTiendaNombre ?? 'No registrado')} />
+          ) : null}
+          {jefe?.telefono ? <Linea etiqueta="Teléfono" valor={jefe.telefono} /> : null}
+          {jefe?.email ? <Linea etiqueta="Correo" valor={jefe.email} /> : null}
         </View>
 
         {visita.tipo === 'venta' ? (

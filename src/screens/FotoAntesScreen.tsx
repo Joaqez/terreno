@@ -47,7 +47,7 @@ export default function FotoAntesScreen({ navigation, route }: Props) {
         loading={subiendo}
         onPress={() => {
           actualizarBorrador({ fotoAntesUrl: fotoUrl! });
-          navigation.navigate('TipoVisita', { tiendaId });
+          navigation.navigate('JefeTienda', { tiendaId });
         }}
       />
     </Screen>

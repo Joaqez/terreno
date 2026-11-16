@@ -12,6 +12,7 @@ import CierreDiaScreen from '../screens/CierreDiaScreen';
 import FotoAntesScreen from '../screens/FotoAntesScreen';
 import FotoDespuesScreen from '../screens/FotoDespuesScreen';
 import HomeScreen from '../screens/HomeScreen';
+import JefeTiendaScreen from '../screens/JefeTiendaScreen';
 import LoginScreen from '../screens/LoginScreen';
 import NuevaVisitaScreen from '../screens/NuevaVisitaScreen';
 import ObservacionesScreen from '../screens/ObservacionesScreen';
@@ -51,6 +52,7 @@ export default function RootNavigator({ autenticado }: { autenticado: boolean })
             <Stack.Screen name="TipoVisita" component={TipoVisitaScreen} options={{ title: '' }} />
             <Stack.Screen name="Pedido" component={PedidoScreen} options={{ title: '' }} />
             <Stack.Screen name="FotoAntes" component={FotoAntesScreen} options={{ title: '' }} />
+            <Stack.Screen name="JefeTienda" component={JefeTiendaScreen} options={{ title: '' }} />
             <Stack.Screen name="FotoDespues" component={FotoDespuesScreen} options={{ title: '' }} />
             <Stack.Screen name="Observaciones" component={ObservacionesScreen} options={{ title: '' }} />
             <Stack.Screen

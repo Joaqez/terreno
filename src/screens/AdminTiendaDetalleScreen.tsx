@@ -2,7 +2,9 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import React, { useEffect } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Screen, Subtitle, TextLink, Title } from '../components/ui';
+import JefeTiendaModal from '../components/JefeTiendaModal';
 import VisitaFila, { formatearFecha, formatearHora } from '../components/VisitaFila';
+import { JefeTienda } from '../types';
 import { colors, radius, spacing } from '../theme';
 import { useTerrenoStore } from '../lib/store';
 import { RootStackParamList } from '../navigation/types';
@@ -11,11 +13,39 @@ type Props = NativeStackScreenProps<RootStackParamList, 'AdminTiendaDetalle'>;
 
 export default function AdminTiendaDetalleScreen({ navigation, route }: Props) {
   const { tiendaId } = route.params;
-  const { tiendas, vendedoresDisponibles, cargarVendedores, actualizarTienda, visitasAdmin, cargarVisitasAdmin } =
-    useTerrenoStore();
+  const {
+    tiendas,
+    vendedoresDisponibles,
+    cargarVendedores,
+    actualizarTienda,
+    visitasAdmin,
+    cargarVisitasAdmin,
+    jefesTienda,
+  } = useTerrenoStore();
   const tienda = tiendas.find((t) => t.id === tiendaId);
   const [mostrarSelector, setMostrarSelector] = React.useState(false);
+  /** undefined = modal cerrado; null = crear uno nuevo; un jefe = editarlo. */
+  const [jefeEditando, setJefeEditando] = React.useState<JefeTienda | null | undefined>(undefined);
   const historial = visitasAdmin.filter((v) => v.tiendaId === tiendaId);
+  const jefesDeTienda = jefesTienda.filter((j) => j.tiendaId === tiendaId);
+  const jefesActivos = jefesDeTienda.filter((j) => j.activo);
+  const jefesAnteriores = jefesDeTienda.filter((j) => !j.activo);
+
+  const nombreVendedor = (id?: string) => vendedoresDisponibles.find((v) => v.id === id)?.nombre ?? 'un vendedor';
+
+  function detalleJefe(j: JefeTienda) {
+    // `historial` viene ordenado de más nueva a más antigua.
+    const ultima = historial.find((v) => v.jefeTiendaId === j.id);
+    const registro =
+      j.origen === 'importado'
+        ? 'Importado del Excel de tiendas'
+        : `Registrado el ${formatearFecha(j.creadoEn)} por ${nombreVendedor(j.creadoPorId)}`;
+    return [
+      [j.telefono, j.email].filter(Boolean).join(' · ') || 'Sin teléfono ni correo',
+      registro,
+      ultima ? `Última visita: ${formatearFecha(ultima.horaInicio)}` : 'Aún sin visitas registradas',
+    ].join('\n');
+  }
 
   useEffect(() => {
     cargarVendedores();
@@ -69,12 +99,34 @@ export default function AdminTiendaDetalleScreen({ navigation, route }: Props) {
           <Text style={styles.selectorTexto}>{asignado ? asignado.nombre : 'Sin asignar — tocar para elegir'}</Text>
         </Pressable>
 
-        <Text style={styles.etiqueta}>Información de contacto</Text>
-        <View style={styles.card}>
-          <InfoLinea etiqueta="Contacto" valor={tienda.contacto} />
-          <InfoLinea etiqueta="Teléfono" valor={tienda.telefono} />
-          <InfoLinea etiqueta="Notas" valor={tienda.notas} />
-        </View>
+        <Text style={styles.etiqueta}>Jefes de tienda ({jefesActivos.length})</Text>
+        {jefesActivos.map((j) => (
+          <FilaJefe key={j.id} jefe={j} detalle={detalleJefe(j)} onEditar={() => setJefeEditando(j)} />
+        ))}
+        <Pressable style={styles.nuevoJefe} onPress={() => setJefeEditando(null)}>
+          <Text style={styles.nuevoJefeTexto}>+ Nuevo jefe de tienda</Text>
+        </Pressable>
+        {jefesAnteriores.length ? (
+          <>
+            <Text style={styles.subEtiqueta}>Ya no trabajan aquí ({jefesAnteriores.length})</Text>
+            {jefesAnteriores.map((j) => (
+              <FilaJefe
+                key={j.id}
+                jefe={j}
+                detalle={`${detalleJefe(j)}\nDado de baja el ${formatearFecha(j.bajaEn!)} por ${nombreVendedor(j.bajaPorId)}`}
+              />
+            ))}
+          </>
+        ) : null}
+
+        {tienda.notas ? (
+          <>
+            <Text style={styles.etiqueta}>Notas</Text>
+            <View style={styles.card}>
+              <Text style={styles.infoValor}>{tienda.notas}</Text>
+            </View>
+          </>
+        ) : null}
 
         <Text style={styles.etiqueta}>Historial de visitas ({historial.length})</Text>
         {historial.length ? (
@@ -130,15 +182,25 @@ export default function AdminTiendaDetalleScreen({ navigation, route }: Props) {
           </View>
         </View>
       </Modal>
+
+      <JefeTiendaModal
+        visible={jefeEditando !== undefined}
+        tiendaId={tienda.id}
+        jefe={jefeEditando}
+        onCerrar={() => setJefeEditando(undefined)}
+      />
     </Screen>
   );
 }
 
-function InfoLinea({ etiqueta, valor }: { etiqueta: string; valor?: string }) {
+function FilaJefe({ jefe, detalle, onEditar }: { jefe: JefeTienda; detalle: string; onEditar?: () => void }) {
   return (
-    <View style={styles.infoLinea}>
-      <Text style={styles.infoEtiqueta}>{etiqueta}</Text>
-      <Text style={styles.infoValor}>{valor ?? '—'}</Text>
+    <View style={[styles.card, styles.filaJefe, !jefe.activo && { opacity: 0.6 }]}>
+      <View style={{ flex: 1 }}>
+        <Text style={styles.jefeNombre}>{jefe.nombre}</Text>
+        <Text style={styles.jefeDetalle}>{detalle}</Text>
+      </View>
+      {onEditar ? <TextLink title="Editar" onPress={onEditar} /> : null}
     </View>
   );
 }
@@ -161,8 +223,19 @@ const styles = StyleSheet.create({
   selector: { borderWidth: 1, borderColor: colors.border, borderRadius: radius.sm, padding: spacing.md },
   selectorTexto: { fontSize: 13.5, color: colors.ink, fontWeight: '600' },
   card: { backgroundColor: colors.bgElevated, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, padding: spacing.lg },
-  infoLinea: { marginBottom: spacing.sm },
-  infoEtiqueta: { fontSize: 11.5, color: colors.inkFaint, textTransform: 'uppercase', letterSpacing: 0.3 },
+  filaJefe: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md, marginBottom: spacing.sm, padding: spacing.md },
+  jefeNombre: { fontSize: 14, fontWeight: '700', color: colors.ink },
+  jefeDetalle: { fontSize: 12, color: colors.inkSoft, marginTop: 3, lineHeight: 17 },
+  nuevoJefe: {
+    borderWidth: 1.5,
+    borderStyle: 'dashed',
+    borderColor: colors.accent,
+    borderRadius: radius.sm,
+    paddingVertical: 11,
+    alignItems: 'center',
+  },
+  nuevoJefeTexto: { color: colors.accent, fontWeight: '700', fontSize: 13.5 },
+  subEtiqueta: { fontSize: 11.5, fontWeight: '700', color: colors.inkFaint, marginTop: spacing.md, marginBottom: spacing.sm },
   infoValor: { fontSize: 13, color: colors.ink, marginTop: 2 },
   sheetOverlay: { flex: 1, backgroundColor: 'rgba(15,25,22,0.42)', justifyContent: 'flex-end' },
   sheet: { backgroundColor: colors.bgElevated, borderTopLeftRadius: radius.lg, borderTopRightRadius: radius.lg, padding: spacing.xl },

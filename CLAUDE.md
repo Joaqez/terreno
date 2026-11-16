@@ -50,6 +50,7 @@ Estructura de pantallas y su equivalente en `src/screens/`:
 6. Cómo llegar (Waze / Google Maps) — modal dentro de `RutaScreen`
 7. Visita rápida / gestión sin visita presencial — modal dentro de `RutaScreen`
 8. Foto antes — `FotoAntesScreen`
+8b. ¿Con quién hablaste? (jefe de tienda) — `JefeTiendaScreen` (agregada 2026-11-16)
 9. ¿Necesita stock? (tipo de visita) — `TipoVisitaScreen`
 10. Pedido (productos y cantidades) — `PedidoScreen` (reemplazó a "Detalle de venta" el 2026-11-16)
 11. Foto después — `FotoDespuesScreen`
@@ -178,6 +179,9 @@ al revés — se decide el tipo después de la conversación con el encargado:
 
 1. El vendedor llega a la tienda y **primero** toma una foto de nuestro
    exhibidor (`FotoAntesScreen`).
+   Después, **siempre** aparece "¿Con quién hablaste?" (`JefeTiendaScreen`):
+   elige un jefe de tienda ya registrado, crea uno nuevo, o toca "Omitir"
+   (ver "Jefes de tienda" abajo).
 2. Le pregunta al encargado si necesitan más stock.
 3. Si dice que sí → es una **venta**: el vendedor arma el **pedido**
    (`PedidoScreen`) — busca productos del catálogo y fija la cantidad de
@@ -212,6 +216,35 @@ No existe ya un concepto de "entrega que no sea venta" — lo que antes se
 llamaba "entrega" ahora siempre es "venta". Si en algún momento hay que
 reportar esto a Bsale, confirmar con el equipo si el término interno debe
 ser "venta" o si Bsale espera otro nombre.
+
+### Jefes de tienda
+Agregado 2026-11-16. Las tiendas tienen varios jefes/encargados que cambian
+seguido, y se quiere registrar con todos los que se encuentran los vendedores.
+- Viven en su propia colección `jefesTienda` (`{tiendaId, nombre, telefono?,
+  email?, activo, origen, creadoPorId, creadoEn, ...}`), **no dentro de la
+  visita** — se reutilizan entre visitas. La `Visita` solo guarda
+  `jefeTiendaId` + `jefeTiendaNombre` (copia del nombre). Sin esos campos =
+  el vendedor tocó "Omitir" (o es una visita anterior a este cambio).
+- Paso obligatorio en la visita presencial (siempre aparece, justo después
+  de la foto de antes), pero con botón "Omitir". Solo el nombre es
+  obligatorio; teléfono y correo **no** se rotulan como "opcional" (pedido
+  explícito del equipo). Avisa si el teléfono ya existe en otro jefe activo
+  de la misma tienda.
+- Los **vendedores** pueden crear, editar y dar de baja ("Ya no trabaja
+  aquí" → `activo: false`, no se borra). El supervisor ve en
+  `AdminTiendaDetalleScreen` los activos y los dados de baja, quién los
+  registró y la fecha de la última visita con cada uno; también puede
+  editarlos/crearlos ahí. `AdminVisitaDetalleScreen` muestra con quién se habló.
+- **No** aplica a tiendas de región ni a la gestión rápida (decisión del
+  equipo: quedan como estaban).
+- Carga inicial: los 223 contactos que traía el Excel de tiendas
+  (`Tienda.contacto`/`telefono`) se copiaron como jefes con `origen:
+  'importado'` (ids `importado-<tiendaId>`). Ojo que no todos son de verdad
+  jefes de tienda (en Copec la columna era "JOP", repetida entre tiendas);
+  el equipo prefirió cargarlos todos y depurar sobre la marcha. El correo
+  solo se copió si calzaba con el nombre (89 de 223). `Tienda.contacto`/
+  `telefono` siguen en Firestore pero la app ya no los muestra. Las tiendas
+  creadas con "Nueva visita" convierten su contacto en jefe automáticamente.
 
 ### Visita rápida (gestión sin visita presencial)
 Algunos vendedores tienen relación telefónica directa y frecuente con el
@@ -413,6 +446,12 @@ app. **No está implementado ni diseñado todavía.** Antes de construirlo:
 9. ✅ Gestión de las 92 tiendas de región. (Hecho 2026-09-14 —
    `TiendasRegionScreen` + `ObservacionRegionScreen`, ver la nota sobre
    tiendas de región en "Ruta del día" arriba para el detalle.)
+
+10. **Pendiente (pedido 2026-11-16)**: enviar el reporte de las visitas por
+   correo al usuario y a otros destinatarios que todavía tiene que definir.
+   Falta decidir formato y frecuencia (por visita, resumen diario, etc.);
+   requiere un backend (Cloud Function + proveedor de correo), no se puede
+   mandar correo directo desde la app.
 
 ## Cómo darle feedback a este proyecto
 

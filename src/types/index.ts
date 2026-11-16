@@ -33,6 +33,30 @@ export interface ItemPedido {
   cantidad: number;
 }
 
+/**
+ * Jefe/encargado de una tienda (colección `jefesTienda`). Vive aparte de la
+ * visita porque cambian seguido y se reutilizan entre visitas: la visita solo
+ * guarda con cuál se habló. Los vendedores los crean, editan y dan de baja
+ * desde la visita; dar de baja no borra el documento (queda en el historial).
+ */
+export interface JefeTienda {
+  id: string;
+  tiendaId: string;
+  nombre: string;
+  telefono?: string;
+  email?: string;
+  /** false = "Ya no trabaja aquí": se oculta de la visita pero sigue en el historial del panel. */
+  activo: boolean;
+  /** 'importado' = cargado desde el contacto que traía el Excel de tiendas (2026-11-16). */
+  origen: 'importado' | 'vendedor';
+  creadoPorId?: string;
+  creadoEn: string; // ISO
+  actualizadoPorId?: string;
+  actualizadoEn?: string; // ISO
+  bajaPorId?: string;
+  bajaEn?: string; // ISO
+}
+
 export interface Tienda {
   id: string;
   nombre: string;
@@ -74,6 +98,11 @@ export interface Visita {
   fotoAntesUrl?: string;
   fotoDespuesUrl?: string;
   observaciones?: string;
+  /** Con qué jefe de tienda se habló. Sin valor = el vendedor tocó "Omitir"
+   * (o es una visita anterior a 2026-11-16). El nombre se copia para que siga
+   * legible si después se edita el jefe. */
+  jefeTiendaId?: string;
+  jefeTiendaNombre?: string;
 
   // Presente solo si modo === 'rapida'
   motivoGestionRapida?: string;

@@ -14,7 +14,10 @@ import {
 } from 'firebase/firestore';
 import { db } from './firebase';
 import { escribirConCola, guardarCache, leerCache, reintentarPendientes } from './offline';
-import { ItemPedido, JornadaVendedor, Producto, Tienda, Vendedor, Visita } from '../types';
+import { ItemPedido, JefeTienda, JornadaVendedor, Producto, Tienda, Vendedor, Visita } from '../types';
+
+/** Datos editables de un jefe de tienda (lo que pide el formulario). */
+export type DatosJefeTienda = Pick<JefeTienda, 'nombre' | 'telefono' | 'email'>;
 
 const vendedorVacio: Vendedor = { id: '', nombre: '', email: '', rol: 'vendedor', minimoDiario: 0 };
 
@@ -32,7 +35,7 @@ const vendedorVacio: Vendedor = { id: '', nombre: '', email: '', rol: 'vendedor'
  */
 
 /** Borrador de la visita presencial en curso: se va llenando pantalla por
- * pantalla (foto antes → ¿necesita stock? → detalle de venta → foto después
+ * pantalla (foto antes → jefe de tienda → ¿necesita stock? → pedido → foto después
  * → observaciones) y se vuelca a una Visita real recién en "Finalizar visita". */
 export interface BorradorVisita {
   tiendaId: string;
@@ -40,6 +43,8 @@ export interface BorradorVisita {
   pedido?: ItemPedido[];
   fotoAntesUrl?: string;
   fotoDespuesUrl?: string;
+  jefeTiendaId?: string;
+  jefeTiendaNombre?: string;
   horaInicio: string;
 }
 
@@ -48,6 +53,7 @@ const jornadasCol = collection(db, 'jornadas');
 const visitasCol = collection(db, 'visitas');
 const vendedoresCol = collection(db, 'vendedores');
 const productosCol = collection(db, 'productos');
+const jefesTiendaCol = collection(db, 'jefesTienda');
 
 export function idJornadaDeHoy(vendedorId: string) {
   const hoy = new Date().toISOString().slice(0, 10);
@@ -59,11 +65,14 @@ export function idJornadaDeHoy(vendedorId: string) {
  * un listener nuevo cada vez). */
 let unsubTiendas: Unsubscribe | null = null;
 let unsubProductos: Unsubscribe | null = null;
+let unsubJefes: Unsubscribe | null = null;
 
 interface TerrenoState {
   vendedor: Vendedor;
   tiendas: Tienda[];
   productos: Producto[];
+  /** Todos los jefes de tienda (activos y dados de baja) de todas las tiendas. */
+  jefesTienda: JefeTienda[];
   jornada: JornadaVendedor | null;
   visitas: Visita[];
   borrador: BorradorVisita | null;
@@ -91,6 +100,11 @@ interface TerrenoState {
   registrarVisita: (visita: Omit<Visita, 'id' | 'vendedorId' | 'jornadaId'>) => void;
   marcarGestionRapida: (tiendaId: string, motivo: string) => void;
 
+  /** Jefes de tienda: los vendedores los crean, editan y dan de baja desde la visita. */
+  crearJefeTienda: (tiendaId: string, datos: DatosJefeTienda) => JefeTienda;
+  actualizarJefeTienda: (jefeId: string, datos: DatosJefeTienda) => void;
+  darDeBajaJefeTienda: (jefeId: string) => void;
+
   iniciarBorrador: (tiendaId: string) => void;
   actualizarBorrador: (cambios: Partial<BorradorVisita>) => void;
   finalizarBorrador: (observaciones?: string) => void;
@@ -106,6 +120,7 @@ export const useTerrenoStore = create<TerrenoState>((set, get) => ({
   vendedor: vendedorVacio,
   tiendas: [],
   productos: [],
+  jefesTienda: [],
   jornada: null,
   visitas: [],
   borrador: null,
@@ -131,10 +146,13 @@ export const useTerrenoStore = create<TerrenoState>((set, get) => ({
     unsubTiendas = null;
     unsubProductos?.();
     unsubProductos = null;
+    unsubJefes?.();
+    unsubJefes = null;
     set({
       vendedor: vendedorVacio,
       tiendas: [],
       productos: [],
+      jefesTienda: [],
       jornada: null,
       visitas: [],
       borrador: null,
@@ -152,7 +170,13 @@ export const useTerrenoStore = create<TerrenoState>((set, get) => ({
     // spinner infinito esperando una respuesta que puede no llegar.
     const cache = await leerCache(vendedorId);
     if (cache) {
-      set({ tiendas: cache.tiendas, productos: cache.productos ?? [], jornada: cache.jornada, visitas: cache.visitas });
+      set({
+        tiendas: cache.tiendas,
+        productos: cache.productos ?? [],
+        jefesTienda: cache.jefesTienda ?? [],
+        jornada: cache.jornada,
+        visitas: cache.visitas,
+      });
     }
     set({ cargandoInicial: false });
 
@@ -172,6 +196,14 @@ export const useTerrenoStore = create<TerrenoState>((set, get) => ({
         set({
           productos: snap.docs
             .map((d) => ({ id: d.id, ...d.data() }) as Producto)
+            .sort((a, b) => a.nombre.localeCompare(b.nombre)),
+        });
+      });
+      unsubJefes?.();
+      unsubJefes = onSnapshot(jefesTiendaCol, (snap) => {
+        set({
+          jefesTienda: snap.docs
+            .map((d) => ({ id: d.id, ...d.data() }) as JefeTienda)
             .sort((a, b) => a.nombre.localeCompare(b.nombre)),
         });
       });
@@ -252,6 +284,10 @@ export const useTerrenoStore = create<TerrenoState>((set, get) => ({
     const nueva: Tienda = { ...tienda, id: ref.id, esMinima: false, distanciaKm: null, agregadaPorVendedor: true };
     set({ tiendas: [...get().tiendas, nueva] });
     escribirConCola('tiendas', nueva.id, 'set', nueva);
+    // El contacto que se anota al crear la tienda pasa a ser su primer jefe de tienda.
+    if (tienda.contacto) {
+      get().crearJefeTienda(nueva.id, { nombre: tienda.contacto, telefono: tienda.telefono });
+    }
 
     const jornada = get().jornada;
     if (jornada) {
@@ -290,6 +326,44 @@ export const useTerrenoStore = create<TerrenoState>((set, get) => ({
     });
   },
 
+  crearJefeTienda: (tiendaId, datos) => {
+    const ref = doc(jefesTiendaCol);
+    const nuevo: JefeTienda = {
+      id: ref.id,
+      tiendaId,
+      nombre: datos.nombre.trim(),
+      telefono: datos.telefono?.trim() || undefined,
+      email: datos.email?.trim() || undefined,
+      activo: true,
+      origen: 'vendedor',
+      creadoPorId: get().vendedor.id,
+      creadoEn: new Date().toISOString(),
+    };
+    set({ jefesTienda: [...get().jefesTienda, nuevo].sort((a, b) => a.nombre.localeCompare(b.nombre)) });
+    escribirConCola('jefesTienda', nuevo.id, 'set', nuevo);
+    return nuevo;
+  },
+
+  actualizarJefeTienda: (jefeId, datos) => {
+    // Vacío = '' (no undefined): la cola descarta los undefined y entonces
+    // borrar un teléfono no llegaría nunca a Firestore.
+    const cambios = {
+      nombre: datos.nombre.trim(),
+      telefono: datos.telefono?.trim() ?? '',
+      email: datos.email?.trim() ?? '',
+      actualizadoPorId: get().vendedor.id,
+      actualizadoEn: new Date().toISOString(),
+    };
+    set({ jefesTienda: get().jefesTienda.map((j) => (j.id === jefeId ? { ...j, ...cambios } : j)) });
+    escribirConCola('jefesTienda', jefeId, 'update', cambios);
+  },
+
+  darDeBajaJefeTienda: (jefeId) => {
+    const cambios = { activo: false, bajaPorId: get().vendedor.id, bajaEn: new Date().toISOString() };
+    set({ jefesTienda: get().jefesTienda.map((j) => (j.id === jefeId ? { ...j, ...cambios } : j)) });
+    escribirConCola('jefesTienda', jefeId, 'update', cambios);
+  },
+
   iniciarBorrador: (tiendaId) => {
     set({ borrador: { tiendaId, horaInicio: new Date().toISOString() } });
   },
@@ -310,6 +384,8 @@ export const useTerrenoStore = create<TerrenoState>((set, get) => ({
       pedido: b.pedido,
       fotoAntesUrl: b.fotoAntesUrl,
       fotoDespuesUrl: b.fotoDespuesUrl,
+      jefeTiendaId: b.jefeTiendaId,
+      jefeTiendaNombre: b.jefeTiendaNombre,
       observaciones,
       horaInicio: b.horaInicio,
       horaFin: new Date().toISOString(),
@@ -357,12 +433,14 @@ useTerrenoStore.subscribe((estado, anterior) => {
     estado.vendedor.id &&
     (estado.tiendas !== anterior.tiendas ||
       estado.productos !== anterior.productos ||
+      estado.jefesTienda !== anterior.jefesTienda ||
       estado.jornada !== anterior.jornada ||
       estado.visitas !== anterior.visitas)
   ) {
     guardarCache(estado.vendedor.id, {
       tiendas: estado.tiendas,
       productos: estado.productos,
+      jefesTienda: estado.jefesTienda,
       jornada: estado.jornada,
       visitas: estado.visitas,
     });
