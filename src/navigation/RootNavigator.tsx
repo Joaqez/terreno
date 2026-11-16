@@ -13,7 +13,6 @@ import DetalleVentaScreen from '../screens/DetalleVentaScreen';
 import FotoAntesScreen from '../screens/FotoAntesScreen';
 import FotoDespuesScreen from '../screens/FotoDespuesScreen';
 import HomeScreen from '../screens/HomeScreen';
-import KmInicioScreen from '../screens/KmInicioScreen';
 import LoginScreen from '../screens/LoginScreen';
 import NuevaVisitaScreen from '../screens/NuevaVisitaScreen';
 import ObservacionesScreen from '../screens/ObservacionesScreen';
@@ -47,7 +46,6 @@ export default function RootNavigator({ autenticado }: { autenticado: boolean })
         {autenticado ? (
           <>
             <Stack.Screen name="Home" component={HomeScreen} options={{ headerShown: false }} />
-            <Stack.Screen name="KmInicio" component={KmInicioScreen} options={{ title: '' }} />
             <Stack.Screen name="Ruta" component={RutaScreen} options={{ title: '', headerBackVisible: false }} />
             <Stack.Screen name="NuevaVisita" component={NuevaVisitaScreen} options={{ title: '' }} />
             <Stack.Screen name="TipoVisita" component={TipoVisitaScreen} options={{ title: '' }} />

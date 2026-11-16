@@ -83,8 +83,8 @@ interface TerrenoState {
   cerrarSesionLocal: () => void;
 
   inicializar: () => Promise<void>;
-  iniciarJornada: (km: number, fotoUrl: string) => void;
-  finalizarJornada: (km: number, fotoUrl: string) => void;
+  iniciarJornada: () => void;
+  finalizarJornada: () => void;
   agregarTiendaCreadaPorVendedor: (tienda: Omit<Tienda, 'id' | 'esMinima' | 'distanciaKm'>) => void;
   registrarVisita: (visita: Omit<Visita, 'id' | 'vendedorId' | 'jornadaId'>) => void;
   marcarGestionRapida: (tiendaId: string, motivo: string) => void;
@@ -209,13 +209,12 @@ export const useTerrenoStore = create<TerrenoState>((set, get) => ({
     }
   },
 
-  iniciarJornada: (km, fotoUrl) => {
+  iniciarJornada: () => {
     const vendedorId = get().vendedor.id;
     const jornada: JornadaVendedor = {
       id: idJornadaDeHoy(vendedorId),
       vendedorId,
       fecha: new Date().toISOString().slice(0, 10),
-      kmInicio: { km, fotoUrl, hora: new Date().toISOString() },
       horaInicio: new Date().toISOString(),
       tiendaIds: get()
         .tiendas.filter((t) => t.esMinima && t.vendedorAsignadoId === vendedorId)
@@ -226,13 +225,10 @@ export const useTerrenoStore = create<TerrenoState>((set, get) => ({
     escribirConCola('jornadas', jornada.id, 'set', jornada);
   },
 
-  finalizarJornada: (km, fotoUrl) => {
+  finalizarJornada: () => {
     const jornada = get().jornada;
     if (!jornada) return;
-    const cambios = {
-      kmFinal: { km, fotoUrl, hora: new Date().toISOString() },
-      horaFin: new Date().toISOString(),
-    };
+    const cambios = { horaFin: new Date().toISOString() };
     set({ jornada: { ...jornada, ...cambios } });
     escribirConCola('jornadas', jornada.id, 'update', cambios);
   },

@@ -4,8 +4,8 @@ import { subirFoto } from './storage';
 
 /**
  * Encapsula "tomar foto → mostrar preview de inmediato → subirla a Storage
- * en paralelo" para las 4 pantallas que piden una fotografía (km inicio, km
- * final, foto antes, foto después). El botón de continuar de cada pantalla
+ * en paralelo" para las pantallas que piden una fotografía (foto antes, foto
+ * después). El botón de continuar de cada pantalla
  * debe quedar deshabilitado hasta que `fotoUrl` exista (subida confirmada) —
  * `fotoUri` es solo para el preview local, nunca se guarda en Firestore.
  *

@@ -6,7 +6,7 @@ import * as ImagePicker from 'expo-image-picker';
  *
  * Se usa expo-image-picker (en vez de armar una vista de cámara propia con
  * expo-camera) porque es lo más simple para "toma una foto y listo", que es
- * todo lo que necesitan las pantallas de kilometraje y de exhibidor. Si más
+ * todo lo que necesitan las pantallas de foto del exhibidor. Si más
  * adelante se quiere una cámara in-app con overlay/guía, expo-camera es el
  * reemplazo natural de este archivo.
  */

@@ -7,7 +7,7 @@ import { auth } from '../lib/firebase';
 import { useTerrenoStore } from '../lib/store';
 
 export default function ResumenDiaScreen() {
-  const { jornada, tiendas, visitas, vendedor } = useTerrenoStore();
+  const { tiendas, visitas, vendedor } = useTerrenoStore();
 
   const minimas = tiendas.filter((t) => t.esMinima);
   const visitadasIds = new Set(visitas.map((v) => v.tiendaId));
@@ -15,7 +15,7 @@ export default function ResumenDiaScreen() {
   const metaDelDia = vendedor.minimoDiario > 0 ? vendedor.minimoDiario : minimas.length;
   const ventas = visitas.filter((v) => v.modo === 'presencial' && v.tipo === 'venta').length;
   const mantenciones = visitas.filter((v) => v.modo === 'presencial' && v.tipo === 'mantencion').length;
-  const km = jornada?.kmFinal && jornada?.kmInicio ? jornada.kmFinal.km - jornada.kmInicio.km : 0;
+  const gestiones = visitas.filter((v) => v.modo === 'rapida').length;
   const pendientes = minimas.filter((t) => !visitadasIds.has(t.id));
 
   return (
@@ -52,9 +52,9 @@ export default function ResumenDiaScreen() {
 
             <View style={styles.statGrid}>
               <Stat num={`${visitadas}/${metaDelDia}`} lbl="Tiendas mínimas" />
-              <Stat num={String(km)} lbl="Km recorridos" />
               <Stat num={String(ventas)} lbl="Ventas" />
               <Stat num={String(mantenciones)} lbl="Mantenciones" />
+              <Stat num={String(gestiones)} lbl="Gestiones rápidas" />
             </View>
 
             <Text style={styles.sectionLabel}>Visitas del día</Text>

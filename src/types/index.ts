@@ -45,12 +45,6 @@ export interface Tienda {
   lng?: number;
 }
 
-export interface RegistroKilometraje {
-  km: number;
-  fotoUrl: string;
-  hora: string; // ISO
-}
-
 export interface Visita {
   id: string;
   tiendaId: string;
@@ -78,8 +72,6 @@ export interface JornadaVendedor {
   id: string;
   vendedorId: string;
   fecha: string; // YYYY-MM-DD
-  kmInicio?: RegistroKilometraje;
-  kmFinal?: RegistroKilometraje;
   horaInicio?: string; // ISO
   horaFin?: string; // ISO
   tiendaIds: string[]; // ruta del día (mínimas + agregadas)

@@ -1,7 +1,6 @@
 export type RootStackParamList = {
   Login: undefined;
   Home: undefined;
-  KmInicio: undefined;
   Ruta: undefined;
   NuevaVisita: undefined;
   TipoVisita: { tiendaId: string };

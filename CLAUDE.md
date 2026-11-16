@@ -12,8 +12,8 @@ que volver a inventarlas.
 "Terreno" es la app móvil interna para los vendedores de la empresa que
 visitan tiendas (minimarkets, botillerías, almacenes, supermercados, etc.)
 para reponer/vender productos y hacer mantención de nuestros exhibidores.
-Reemplaza una bitácora informal por un registro estructurado: kilometraje,
-ruta del día, y el detalle de cada visita con fotos.
+Reemplaza una bitácora informal por un registro estructurado: ruta del día
+y el detalle de cada visita con fotos.
 
 Usuarios: vendedores en terreno, con una mezcla de celulares Android e iOS
 (confirmado 2026-09-07) — hay que soportar ambos, no priorizar uno.
@@ -44,7 +44,7 @@ Estructura de pantallas y su equivalente en `src/screens/`:
 
 1. Inicio de sesión — `LoginScreen`
 2. Panel principal — `HomeScreen`
-3. Kilometraje inicial — `KmInicioScreen`
+3. ~~Kilometraje inicial — `KmInicioScreen`~~ (eliminada 2026-11-16, ver "Inicio de día")
 4. Ruta del día — `RutaScreen`
 5. Nueva visita (crear tienda) — `NuevaVisitaScreen`
 6. Cómo llegar (Waze / Google Maps) — modal dentro de `RutaScreen`
@@ -61,8 +61,11 @@ Estructura de pantallas y su equivalente en `src/screens/`:
 ## Reglas de negocio (confirmadas con el equipo)
 
 ### Inicio de día
-El vendedor debe registrar el kilometraje inicial de su vehículo (foto del
-odómetro + número manual) antes de poder ver su ruta. Esto arranca la
+El vendedor toca "Iniciar día" en `HomeScreen` antes de poder ver su ruta.
+**Desde 2026-11-16 ya no se registra kilometraje** (ni foto del odómetro ni
+número, ni al inicio ni al cierre) — el equipo decidió quitarlo. Las jornadas
+antiguas en Firestore todavía pueden tener `kmInicio`/`kmFinal`, pero la app
+ya no los lee ni escribe. Esto arranca la
 `JornadaVendedor` del día.
 
 ### Ruta del día
@@ -202,8 +205,8 @@ del día**, y se muestra distinta a una visita presencial (badge "Gestionada"
 en vez de "Visitada") tanto en la ruta como en el resumen del día.
 
 ### Cierre de día
-Al terminar, el vendedor registra el kilometraje final (foto + número). La
-app calcula los km recorridos (`kmFinal - kmInicio`) y muestra un resumen:
+Al terminar, el vendedor confirma "Finalizar día" en `CierreDiaScreen` (sin
+kilometraje desde 2026-11-16) y la app muestra un resumen:
 tiendas visitadas vs. mínimo, ventas realizadas, mantenciones realizadas,
 gestiones rápidas, y la lista completa de visitas del día con hora.
 
@@ -312,11 +315,10 @@ app. **No está implementado ni diseñado todavía.** Antes de construirlo:
   sesión iniciada (`request.auth != null`) pero todavía no distinguen dueño
   del documento.
 - Subida de fotos a Firebase Storage funcionando (confirmado end-to-end
-  2026-09-08: kilometraje inicio/final y foto antes/después de cada visita
-  se suben apenas se toman, no al guardar). `src/lib/storage.ts` +
-  `src/lib/useFotoConSubida.ts` (hook compartido por las 4 pantallas de
-  foto) + `storage.rules` (mismo criterio que `firestore.rules`). Los
-  campos `fotoAntesUrl`/`fotoDespuesUrl`/`kmInicio.fotoUrl`/`kmFinal.fotoUrl`
+  2026-09-08: foto antes/después de cada visita se suben apenas se toman,
+  no al guardar). `src/lib/storage.ts` + `src/lib/useFotoConSubida.ts`
+  (hook compartido por las pantallas de foto) + `storage.rules` (mismo
+  criterio que `firestore.rules`). Los campos `fotoAntesUrl`/`fotoDespuesUrl`
   en Firestore ya son URLs reales de `firebasestorage.googleapis.com`, no
   URIs locales. Nota de la versión web: `Alert.alert` de React Native es un
   no-op en `react-native-web` — los errores de subida se muestran como texto

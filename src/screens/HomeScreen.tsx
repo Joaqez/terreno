@@ -11,7 +11,7 @@ import { RootStackParamList } from '../navigation/types';
 type Props = NativeStackScreenProps<RootStackParamList, 'Home'>;
 
 export default function HomeScreen({ navigation }: Props) {
-  const { vendedor, jornada, tiendas, visitas } = useTerrenoStore();
+  const { vendedor, jornada, tiendas, visitas, iniciarJornada } = useTerrenoStore();
 
   const fecha = new Date().toLocaleDateString('es-CL', {
     weekday: 'long',
@@ -28,9 +28,15 @@ export default function HomeScreen({ navigation }: Props) {
         <View style={styles.hero}>
           <Text style={styles.heroTitle}>Tu día aún no comienza</Text>
           <Text style={styles.heroText}>
-            Registra el kilometraje inicial de tu vehículo para comenzar tu ruta de hoy.
+            Inicia tu día para ver tu ruta de hoy.
           </Text>
-          <PrimaryButton title="Iniciar día" onPress={() => navigation.navigate('KmInicio')} />
+          <PrimaryButton
+            title="Iniciar día"
+            onPress={() => {
+              iniciarJornada();
+              navigation.reset({ index: 0, routes: [{ name: 'Ruta' }] });
+            }}
+          />
         </View>
 
         {vendedor.rol === 'supervisor' && (
