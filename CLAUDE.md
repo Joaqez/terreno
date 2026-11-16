@@ -194,6 +194,13 @@ al revés — se decide el tipo después de la conversación con el encargado:
    reporte nuevo (borra del catálogo lo que ya no venga, salvo
    `--sin-borrar`). 77 productos cargados al 2026-11-16. Se cachea en el
    teléfono junto a las tiendas para poder armar pedidos sin señal.
+   **Qué productos ve cada tienda** (`productosParaTienda()` en
+   `src/lib/catalogo.ts`, regla del equipo 2026-11-16): Copec solo Ignite,
+   Shell solo GeekBar, Aramco GeekBar + Upends, y cualquier otra tienda
+   (ej. creadas con "Nueva visita") todo menos las variantes "SHELL". Las
+   variantes con "SHELL"/"ARAMCO" en el nombre son exclusivas de esa cadena.
+   La cadena se deduce del prefijo del id de la tienda (`copec-`/`shell-`/
+   `aramco-`).
 4. Si dice que no → es **mantención**: no se pide nada de venta, se salta
    directo a la foto de después.
 5. Foto después de la visita (`FotoDespuesScreen`), mismo ángulo que la de

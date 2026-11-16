@@ -3,6 +3,7 @@ import React, { useMemo, useState } from 'react';
 import { FlatList, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Field, PrimaryButton, Screen, Subtitle, Title } from '../components/ui';
 import { colors, radius, spacing } from '../theme';
+import { productosParaTienda } from '../lib/catalogo';
 import { useTerrenoStore } from '../lib/store';
 import { RootStackParamList } from '../navigation/types';
 import { ItemPedido, Producto } from '../types';
@@ -18,8 +19,9 @@ function normalizar(texto: string) {
 
 export default function PedidoScreen({ navigation, route }: Props) {
   const { tiendaId } = route.params;
-  const { tiendas, productos, borrador, actualizarBorrador } = useTerrenoStore();
+  const { tiendas, productos: catalogo, borrador, actualizarBorrador } = useTerrenoStore();
   const tienda = tiendas.find((t) => t.id === tiendaId);
+  const productos = useMemo(() => productosParaTienda(catalogo, tienda), [catalogo, tienda]);
   const [busqueda, setBusqueda] = useState('');
   const [soloSeleccionados, setSoloSeleccionados] = useState(false);
   const [cantidades, setCantidades] = useState<Record<string, number>>(() =>
