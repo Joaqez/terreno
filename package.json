@@ -40,7 +40,8 @@
     "importar:tiendas": "tsx scripts/importarTiendas.ts",
     "set:nombre": "tsx scripts/setNombre.ts",
     "gestionar:vendedor": "tsx scripts/gestionarVendedor.ts",
-    "geocodificar:tiendas": "tsx scripts/geocodificarTiendas.ts"
+    "geocodificar:tiendas": "tsx scripts/geocodificarTiendas.ts",
+    "asignar:vendedores": "tsx scripts/asignarVendedoresPorExcel.ts"
   },
   "private": true
 }
