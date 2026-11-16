@@ -198,7 +198,9 @@ export const useTerrenoStore = create<TerrenoState>((set, get) => ({
       fecha: new Date().toISOString().slice(0, 10),
       kmInicio: { km, fotoUrl, hora: new Date().toISOString() },
       horaInicio: new Date().toISOString(),
-      tiendaIds: get().tiendas.filter((t) => t.esMinima).map((t) => t.id),
+      tiendaIds: get()
+        .tiendas.filter((t) => t.esMinima && t.vendedorAsignadoId === vendedorId)
+        .map((t) => t.id),
       visitaIds: [],
     };
     set({ jornada });

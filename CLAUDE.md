@@ -87,20 +87,22 @@ propósito. Esto sigue siendo la distancia en **línea recta**, no ruteo real
 por calles — eso sigue siendo el paso 8 del roadmap (Google Directions),
 todavía no implementado.
 
-**Asignación por vendedor — el campo existe, todavía no se usa para filtrar
-(2026-09-09):** el negocio es principalmente vendedores que cubren Santiago,
-con las tiendas repartidas *individualmente* entre ellos (no por comuna) —
-esa repartición real todavía no está formalizada por la empresa ("de palabra
-y memoria"), así que `Tienda.vendedorAsignadoId` existe en el modelo y ya se
-puede fijar desde el panel de administración (ver más abajo), pero
-**`iniciarJornada()` en `store.ts` todavía NO filtra por él** — sigue usando
-`tiendas.filter(t => t.esMinima)` sin distinguir vendedor. Esto es
-deliberado: como hoy casi ninguna tienda tiene `vendedorAsignadoId` fijado,
-filtrar por ese campo ahora dejaría la ruta de todos vacía, peor que el
-problema actual (todos ven las mismas tiendas de Santiago completas). Una
-vez que un supervisor haya asignado las tiendas reales desde el panel, el
-siguiente paso es cambiar ese filtro a `t.esMinima && t.vendedorAsignadoId
-=== vendedorId`.
+**Asignación por vendedor — ya filtra (actualizado 2026-11-15):** el negocio
+es principalmente vendedores que cubren Santiago, con las tiendas repartidas
+*individualmente* entre ellos (no por comuna). `iniciarJornada()` en
+`store.ts` ahora usa `tiendas.filter(t => t.esMinima &&
+t.vendedorAsignadoId === vendedorId)` — cada vendedor ve solo sus tiendas
+asignadas, no las 131 de Santiago completas. La asignación real se cargó con
+`scripts/asignarVendedoresPorExcel.ts` (lee un Excel de asignación tienda→
+vendedor y fija `vendedorAsignadoId`; reusable para el próximo Excel de
+asignación que llegue — hay que editar el mapeo nombre→correo
+`VENDEDOR_A_EMAIL` dentro del script si aparece gente nueva). De las 131
+tiendas `esMinima` de Santiago, 102 quedaron asignadas (15 a un vendedor
+nuevo, "Santiago"/`shpereznova@gmail.com`; 87 a Benjamín); las 29 restantes
+—incluidas 10 tiendas que el Excel de asignación mencionaba pero que nunca
+se habían importado a Firestore— siguen sin `vendedorAsignadoId`, así que
+hoy no le aparecen a nadie en "Ruta del día" hasta que se asignen desde el
+panel de administración.
 
 Las tiendas **fuera de Santiago** ("de región") no se visitan nunca en
 persona — se hacen seguimiento por teléfono/WhatsApp/correo. Desde
@@ -368,11 +370,10 @@ app. **No está implementado ni diseñado todavía.** Antes de construirlo:
    IndexedDb nativo si en algún momento se quisiera usar en vez de la cola.)
 6. ✅ Panel de administración para supervisores. (Hecho 2026-09-09 — dentro
    de este mismo repo, no un proyecto Next.js aparte como se planeaba antes;
-   ver la sección "Panel de administración" arriba.) **Falta el siguiente
-   paso real**: que un supervisor asigne las 131 tiendas de Santiago a los
-   vendedores reales desde el panel, y recién ahí cambiar el filtro de
-   `iniciarJornada()` para que use esa asignación (hoy sigue mostrando todas
-   las tiendas de Santiago a cualquier vendedor).
+   ver la sección "Panel de administración" arriba.) **Filtro de asignación
+   activado 2026-11-15**: ver la nota actualizada de "Asignación por
+   vendedor" en "Ruta del día" arriba — 102 de 131 tiendas de Santiago ya
+   tienen vendedor asignado, el resto se va completando desde el panel.
 7. Integración con Bsale (ver sección arriba).
 8. ✅ (parcial) Distancia real en "Ruta del día" — la versión gratis (GPS del
    vendedor + distancia en línea recta, sin costo) está hecha, ver la nota
