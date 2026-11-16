@@ -16,6 +16,8 @@ export type RootStackParamList = {
   AdminTiendaDetalle: { tiendaId: string };
   AdminVendedores: undefined;
   AdminVendedorDetalle: { vendedorId: string };
+  AdminVisitas: undefined;
+  AdminVisitaDetalle: { visitaId: string };
   TiendasRegion: undefined;
   ObservacionRegion: { tiendaId: string };
 };

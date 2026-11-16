@@ -54,7 +54,8 @@ export default function AdminTiendasScreen({ navigation }: Props) {
       <Title>Administración de tiendas</Title>
       <Subtitle>{filtradas.length} de {tiendas.length} tiendas</Subtitle>
 
-      <View style={{ marginBottom: spacing.md }}>
+      <View style={{ marginBottom: spacing.md, flexDirection: 'row', gap: spacing.lg }}>
+        <TextLink title="Ver visitas →" onPress={() => navigation.navigate('AdminVisitas')} />
         <TextLink title="Ver vendedores →" onPress={() => navigation.navigate('AdminVendedores')} />
       </View>
 

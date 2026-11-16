@@ -6,6 +6,8 @@ import AdminTiendaDetalleScreen from '../screens/AdminTiendaDetalleScreen';
 import AdminTiendasScreen from '../screens/AdminTiendasScreen';
 import AdminVendedorDetalleScreen from '../screens/AdminVendedorDetalleScreen';
 import AdminVendedoresScreen from '../screens/AdminVendedoresScreen';
+import AdminVisitaDetalleScreen from '../screens/AdminVisitaDetalleScreen';
+import AdminVisitasScreen from '../screens/AdminVisitasScreen';
 import CierreDiaScreen from '../screens/CierreDiaScreen';
 import DetalleVentaScreen from '../screens/DetalleVentaScreen';
 import FotoAntesScreen from '../screens/FotoAntesScreen';
@@ -76,6 +78,8 @@ export default function RootNavigator({ autenticado }: { autenticado: boolean })
               component={AdminVendedorDetalleScreen}
               options={{ title: '' }}
             />
+            <Stack.Screen name="AdminVisitas" component={AdminVisitasScreen} options={{ title: 'Visitas' }} />
+            <Stack.Screen name="AdminVisitaDetalle" component={AdminVisitaDetalleScreen} options={{ title: '' }} />
             <Stack.Screen name="TiendasRegion" component={TiendasRegionScreen} options={{ title: 'Región' }} />
             <Stack.Screen name="ObservacionRegion" component={ObservacionRegionScreen} options={{ title: '' }} />
           </>

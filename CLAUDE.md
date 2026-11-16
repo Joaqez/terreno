@@ -133,6 +133,14 @@ proyecto. Pantallas: `AdminTiendasScreen` (buscar/filtrar las 223 tiendas,
 Santiago/Región/todas) → `AdminTiendaDetalleScreen` (asignar
 `vendedorAsignadoId`, cambiar `esMinima`) y `AdminVendedoresScreen` →
 `AdminVendedorDetalleScreen` (cambiar `rol`, fijar `minimoDiario`).
+Desde 2026-11-16 también `AdminVisitasScreen` (link "Ver visitas" en
+`AdminTiendasScreen`): todas las visitas de todos los vendedores agrupadas por
+fecha, con filtro por vendedor y búsqueda por tienda →
+`AdminVisitaDetalleScreen` (fotos antes/después, observaciones, tipo de
+visita, factura). `AdminTiendaDetalleScreen` muestra además el historial de
+visitas de esa tienda. Carga las últimas 1000 visitas (`cargarVisitasAdmin()`
+en `store.ts`); si el volumen crece mucho, paginar o filtrar por fecha en la
+consulta.
 
 - **Quién es supervisor**: colección nueva `vendedores` en Firestore (doc id
   = uid de Firebase Auth), con `{nombre, email, rol: 'vendedor' |

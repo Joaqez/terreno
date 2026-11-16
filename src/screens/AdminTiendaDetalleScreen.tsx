@@ -2,6 +2,7 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import React, { useEffect } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Screen, Subtitle, TextLink, Title } from '../components/ui';
+import VisitaFila, { formatearFecha, formatearHora } from '../components/VisitaFila';
 import { colors, radius, spacing } from '../theme';
 import { useTerrenoStore } from '../lib/store';
 import { RootStackParamList } from '../navigation/types';
@@ -10,13 +11,16 @@ type Props = NativeStackScreenProps<RootStackParamList, 'AdminTiendaDetalle'>;
 
 export default function AdminTiendaDetalleScreen({ navigation, route }: Props) {
   const { tiendaId } = route.params;
-  const { tiendas, vendedoresDisponibles, cargarVendedores, actualizarTienda } = useTerrenoStore();
+  const { tiendas, vendedoresDisponibles, cargarVendedores, actualizarTienda, visitasAdmin, cargarVisitasAdmin } =
+    useTerrenoStore();
   const tienda = tiendas.find((t) => t.id === tiendaId);
   const [mostrarSelector, setMostrarSelector] = React.useState(false);
+  const historial = visitasAdmin.filter((v) => v.tiendaId === tiendaId);
 
   useEffect(() => {
     cargarVendedores();
-  }, [cargarVendedores]);
+    cargarVisitasAdmin();
+  }, [cargarVendedores, cargarVisitasAdmin]);
 
   if (!tienda) {
     return (
@@ -71,6 +75,24 @@ export default function AdminTiendaDetalleScreen({ navigation, route }: Props) {
           <InfoLinea etiqueta="Teléfono" valor={tienda.telefono} />
           <InfoLinea etiqueta="Notas" valor={tienda.notas} />
         </View>
+
+        <Text style={styles.etiqueta}>Historial de visitas ({historial.length})</Text>
+        {historial.length ? (
+          historial.map((v) => (
+            <VisitaFila
+              key={v.id}
+              visita={v}
+              titulo={formatearFecha(v.horaInicio)}
+              detalle={`${formatearHora(v.horaInicio)} · ${
+                vendedoresDisponibles.find((x) => x.id === v.vendedorId)?.nombre ?? 'Vendedor'
+              }`}
+              onPress={() => navigation.navigate('AdminVisitaDetalle', { visitaId: v.id })}
+            />
+          ))
+        ) : (
+          <Text style={styles.infoValor}>Sin visitas registradas.</Text>
+        )}
+        <View style={{ height: 40 }} />
       </ScrollView>
 
       <Modal visible={mostrarSelector} transparent animationType="slide" onRequestClose={() => setMostrarSelector(false)}>

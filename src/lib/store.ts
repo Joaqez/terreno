@@ -1,5 +1,17 @@
 import { create } from 'zustand';
-import { collection, doc, getDoc, getDocs, onSnapshot, query, setDoc, where, type Unsubscribe } from 'firebase/firestore';
+import {
+  collection,
+  doc,
+  getDoc,
+  getDocs,
+  limit,
+  onSnapshot,
+  orderBy,
+  query,
+  setDoc,
+  where,
+  type Unsubscribe,
+} from 'firebase/firestore';
 import { db } from './firebase';
 import { escribirConCola, guardarCache, leerCache, reintentarPendientes } from './offline';
 import { JornadaVendedor, Tienda, Vendedor, Visita } from '../types';
@@ -58,6 +70,9 @@ interface TerrenoState {
    * editar rol/meta) — no se carga en el arranque normal, solo cuando se
    * entra a esa sección. */
   vendedoresDisponibles: Vendedor[];
+  /** Visitas de todos los vendedores, para revisarlas desde el panel de administración. */
+  visitasAdmin: Visita[];
+  cargandoVisitasAdmin: boolean;
 
   /** Vuelca a `vendedor` los datos del usuario ya autenticado en Firebase Auth
    * (el nombre viene del "display name" configurado al crear la cuenta en la
@@ -80,6 +95,7 @@ interface TerrenoState {
 
   /** Panel de administración (solo para vendedor.rol === 'supervisor'). */
   cargarVendedores: () => Promise<void>;
+  cargarVisitasAdmin: () => Promise<void>;
   actualizarTienda: (tiendaId: string, cambios: Partial<Omit<Tienda, 'id'>>) => void;
   actualizarVendedor: (vendedorId: string, cambios: Partial<Pick<Vendedor, 'rol' | 'minimoDiario' | 'nombre'>>) => void;
 }
@@ -92,6 +108,8 @@ export const useTerrenoStore = create<TerrenoState>((set, get) => ({
   borrador: null,
   cargandoInicial: true,
   vendedoresDisponibles: [],
+  visitasAdmin: [],
+  cargandoVisitasAdmin: false,
 
   setVendedorAutenticado: (usuario) => {
     set({
@@ -116,6 +134,7 @@ export const useTerrenoStore = create<TerrenoState>((set, get) => ({
       borrador: null,
       cargandoInicial: true,
       vendedoresDisponibles: [],
+      visitasAdmin: [],
     });
   },
 
@@ -292,6 +311,16 @@ export const useTerrenoStore = create<TerrenoState>((set, get) => ({
   cargarVendedores: async () => {
     const snap = await getDocs(vendedoresCol);
     set({ vendedoresDisponibles: snap.docs.map((d) => ({ id: d.id, ...d.data() }) as Vendedor) });
+  },
+
+  cargarVisitasAdmin: async () => {
+    set({ cargandoVisitasAdmin: true });
+    try {
+      const snap = await getDocs(query(visitasCol, orderBy('horaInicio', 'desc'), limit(1000)));
+      set({ visitasAdmin: snap.docs.map((d) => ({ id: d.id, ...d.data() }) as Visita) });
+    } finally {
+      set({ cargandoVisitasAdmin: false });
+    }
   },
 
   actualizarTienda: (tiendaId, cambios) => {
