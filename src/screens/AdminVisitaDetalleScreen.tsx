@@ -30,6 +30,7 @@ export default function AdminVisitaDetalleScreen({ navigation, route }: Props) {
   const tienda = tiendas.find((t) => t.id === visita.tiendaId);
   const vendedor = vendedoresDisponibles.find((v) => v.id === visita.vendedorId);
   const etiqueta = etiquetaVisita(visita);
+  const pedido = visita.pedido ?? [];
 
   return (
     <Screen>
@@ -48,13 +49,30 @@ export default function AdminVisitaDetalleScreen({ navigation, route }: Props) {
           <Linea etiqueta="Vendedor" valor={vendedor?.nombre ?? '—'} />
           <Linea etiqueta="Fecha" valor={formatearFecha(visita.horaInicio)} />
           <Linea etiqueta="Horario" valor={`${formatearHora(visita.horaInicio)} – ${formatearHora(visita.horaFin)}`} />
-          {visita.tipo === 'venta' ? (
-            <>
-              <Linea etiqueta="Tipo de venta" valor={visita.tipoVenta === 'acordada' ? 'Acordada' : 'Nueva'} />
-              <Linea etiqueta="N° de factura" valor={visita.numeroFactura ?? '—'} />
-            </>
-          ) : null}
         </View>
+
+        {visita.tipo === 'venta' ? (
+          <>
+            <Text style={styles.etiqueta}>
+              Pedido · {pedido.length} productos · {pedido.reduce((n, i) => n + i.cantidad, 0)} unidades
+            </Text>
+            <View style={styles.card}>
+              {pedido.length ? (
+                pedido.map((i) => (
+                  <View key={i.productoId} style={styles.itemPedido}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.itemNombre}>{i.nombre}</Text>
+                      <Text style={styles.itemSku}>SKU {i.sku}</Text>
+                    </View>
+                    <Text style={styles.itemCantidad}>× {i.cantidad}</Text>
+                  </View>
+                ))
+              ) : (
+                <Text style={styles.texto}>Sin productos registrados.</Text>
+              )}
+            </View>
+          </>
+        ) : null}
 
         <Text style={styles.etiqueta}>{visita.modo === 'rapida' ? 'Motivo de la gestión' : 'Observaciones'}</Text>
         <View style={styles.card}>
@@ -125,6 +143,17 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   texto: { fontSize: 13.5, color: colors.ink, lineHeight: 20 },
+  itemPedido: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  itemNombre: { fontSize: 13, fontWeight: '600', color: colors.ink },
+  itemSku: { fontSize: 11, color: colors.inkFaint, marginTop: 1 },
+  itemCantidad: { fontSize: 15, fontWeight: '700', color: colors.accent },
   foto: { width: '100%', aspectRatio: 3 / 4, borderRadius: radius.md, backgroundColor: colors.border },
   sinFoto: { aspectRatio: 4 / 3, alignItems: 'center', justifyContent: 'center' },
   ayudaFoto: { fontSize: 11.5, color: colors.inkFaint, textAlign: 'center', marginTop: 4 },

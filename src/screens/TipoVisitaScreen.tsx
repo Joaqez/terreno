@@ -23,7 +23,7 @@ export default function TipoVisitaScreen({ navigation, route }: Props) {
   function elegir(tipo: 'venta' | 'mantencion') {
     actualizarBorrador({ tipo });
     if (tipo === 'venta') {
-      navigation.navigate('DetalleVenta', { tiendaId });
+      navigation.navigate('Pedido', { tiendaId });
     } else {
       navigation.navigate('FotoDespues', { tiendaId, tipo });
     }
@@ -40,7 +40,7 @@ export default function TipoVisitaScreen({ navigation, route }: Props) {
         </View>
         <View style={{ flex: 1 }}>
           <Text style={styles.choiceTitle}>Sí, necesitan stock</Text>
-          <Text style={styles.choiceText}>Se registra como venta: reposición o ingreso de productos.</Text>
+          <Text style={styles.choiceText}>Se registra como venta: eliges los productos y cantidades del pedido.</Text>
         </View>
       </Pressable>
 

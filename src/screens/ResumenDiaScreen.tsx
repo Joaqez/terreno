@@ -36,7 +36,7 @@ export default function ResumenDiaScreen() {
               {item.modo === 'rapida' ? (
                 <Badge tone="neutral">Gestión rápida</Badge>
               ) : item.tipo === 'venta' ? (
-                <Badge tone="accent">{`Venta${item.numeroFactura ? ' · N° ' + item.numeroFactura : ''}`}</Badge>
+                <Badge tone="accent">{`Venta · ${(item.pedido ?? []).reduce((n, i) => n + i.cantidad, 0)} u.`}</Badge>
               ) : (
                 <Badge tone="neutral">Mantención</Badge>
               )}

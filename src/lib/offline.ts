@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { doc, setDoc, updateDoc } from 'firebase/firestore';
 import { db } from './firebase';
-import { JornadaVendedor, Tienda, Visita } from '../types';
+import { JornadaVendedor, Producto, Tienda, Visita } from '../types';
 
 /**
  * El SDK de Firebase para JavaScript no soporta persistencia offline real de
@@ -28,6 +28,8 @@ function sinUndefined<T extends object>(obj: T): T {
 
 interface CacheVendedor {
   tiendas: Tienda[];
+  /** Opcional: las cachés guardadas antes de existir el catálogo no lo traen. */
+  productos?: Producto[];
   jornada: JornadaVendedor | null;
   visitas: Visita[];
 }

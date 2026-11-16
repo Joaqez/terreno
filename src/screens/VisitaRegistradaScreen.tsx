@@ -28,10 +28,10 @@ export default function VisitaRegistradaScreen({ navigation, route }: Props) {
         <Row k="Tienda" v={tienda?.nombre ?? '—'} />
         <Row k="Tipo de visita" v={visita?.tipo === 'venta' ? 'Venta' : 'Mantención'} />
         {visita?.tipo === 'venta' && (
-          <>
-            <Row k="Tipo de venta" v={visita.tipoVenta === 'nueva' ? 'Venta nueva' : 'Acordada previamente'} />
-            <Row k="N° de factura" v={visita.numeroFactura ?? '—'} mono />
-          </>
+          <Row
+            k="Pedido"
+            v={`${visita.pedido?.length ?? 0} productos · ${(visita.pedido ?? []).reduce((n, i) => n + i.cantidad, 0)} unidades`}
+          />
         )}
         <Row k="Fotos" v="Antes ✓ · Después ✓" />
       </Card>
@@ -44,11 +44,11 @@ export default function VisitaRegistradaScreen({ navigation, route }: Props) {
   );
 }
 
-function Row({ k, v, mono }: { k: string; v: string; mono?: boolean }) {
+function Row({ k, v }: { k: string; v: string }) {
   return (
     <View style={styles.row}>
       <Text style={styles.rowK}>{k}</Text>
-      <Text style={[styles.rowV, mono && { fontVariant: ['tabular-nums'] }]}>{v}</Text>
+      <Text style={styles.rowV}>{v}</Text>
     </View>
   );
 }

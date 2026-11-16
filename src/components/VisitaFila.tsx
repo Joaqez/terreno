@@ -20,7 +20,10 @@ export function formatearHora(iso: string) {
 
 export function etiquetaVisita(v: Visita): { texto: string; tono: 'done' | 'accent' | 'pending' } {
   if (v.modo === 'rapida') return { texto: 'Gestionada', tono: 'pending' };
-  if (v.tipo === 'venta') return { texto: 'Venta', tono: 'accent' };
+  if (v.tipo === 'venta') {
+    const unidades = (v.pedido ?? []).reduce((n, i) => n + i.cantidad, 0);
+    return { texto: unidades ? `Venta · ${unidades} u.` : 'Venta', tono: 'accent' };
+  }
   return { texto: 'Mantención', tono: 'done' };
 }
 

@@ -51,7 +51,7 @@ Estructura de pantallas y su equivalente en `src/screens/`:
 7. Visita rápida / gestión sin visita presencial — modal dentro de `RutaScreen`
 8. Foto antes — `FotoAntesScreen`
 9. ¿Necesita stock? (tipo de visita) — `TipoVisitaScreen`
-10. Detalle de venta — `DetalleVentaScreen`
+10. Pedido (productos y cantidades) — `PedidoScreen` (reemplazó a "Detalle de venta" el 2026-11-16)
 11. Foto después — `FotoDespuesScreen`
 12. Observaciones — `ObservacionesScreen`
 13. Visita registrada (confirmación) — `VisitaRegistradaScreen`
@@ -140,7 +140,7 @@ Desde 2026-11-16 también `AdminVisitasScreen` (link "Ver visitas" en
 `AdminTiendasScreen`): todas las visitas de todos los vendedores agrupadas por
 fecha, con filtro por vendedor y búsqueda por tienda →
 `AdminVisitaDetalleScreen` (fotos antes/después, observaciones, tipo de
-visita, factura). `AdminTiendaDetalleScreen` muestra además el historial de
+visita, productos del pedido). `AdminTiendaDetalleScreen` muestra además el historial de
 visitas de esa tienda. Carga las últimas 1000 visitas (`cargarVisitasAdmin()`
 en `store.ts`); si el volumen crece mucho, paginar o filtrar por fecha en la
 consulta.
@@ -179,9 +179,21 @@ al revés — se decide el tipo después de la conversación con el encargado:
 1. El vendedor llega a la tienda y **primero** toma una foto de nuestro
    exhibidor (`FotoAntesScreen`).
 2. Le pregunta al encargado si necesitan más stock.
-3. Si dice que sí → es una **venta**: se pide tipo de venta (`nueva` o
-   `acordada` — acordada previamente con el cliente) y el número de factura
-   (`DetalleVentaScreen`). Ambos tipos de venta piden número de factura.
+3. Si dice que sí → es una **venta**: el vendedor arma el **pedido**
+   (`PedidoScreen`) — busca productos del catálogo y fija la cantidad de
+   cada uno; se guarda en `Visita.pedido` (`ItemPedido[]`, copia nombre/SKU
+   para que el pedido siga legible si el catálogo cambia) y se ve en el
+   panel de administración. Desde 2026-11-16 **ya no se pide número de
+   factura ni tipo de venta** (nueva/acordada) — el equipo los consideró
+   innecesarios; las visitas antiguas pueden traer `tipoVenta`/
+   `numeroFactura` en Firestore, pero la app ya no los usa.
+   **Catálogo**: colección `productos` (doc id = SKU), cargada desde el
+   reporte de productos de Bsale con `npm run importar:productos --
+   "<ruta>.xlsx"` — solo vapes activos (Tipo de Producto VAPORIZADOR*), sin
+   las "Caja X Unidades" ni merch/accesorios/alcohol. Re-ejecutable con un
+   reporte nuevo (borra del catálogo lo que ya no venga, salvo
+   `--sin-borrar`). 77 productos cargados al 2026-11-16. Se cachea en el
+   teléfono junto a las tiendas para poder armar pedidos sin señal.
 4. Si dice que no → es **mantención**: no se pide nada de venta, se salta
    directo a la foto de después.
 5. Foto después de la visita (`FotoDespuesScreen`), mismo ángulo que la de

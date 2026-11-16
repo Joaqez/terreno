@@ -9,7 +9,6 @@ import AdminVendedoresScreen from '../screens/AdminVendedoresScreen';
 import AdminVisitaDetalleScreen from '../screens/AdminVisitaDetalleScreen';
 import AdminVisitasScreen from '../screens/AdminVisitasScreen';
 import CierreDiaScreen from '../screens/CierreDiaScreen';
-import DetalleVentaScreen from '../screens/DetalleVentaScreen';
 import FotoAntesScreen from '../screens/FotoAntesScreen';
 import FotoDespuesScreen from '../screens/FotoDespuesScreen';
 import HomeScreen from '../screens/HomeScreen';
@@ -17,6 +16,7 @@ import LoginScreen from '../screens/LoginScreen';
 import NuevaVisitaScreen from '../screens/NuevaVisitaScreen';
 import ObservacionesScreen from '../screens/ObservacionesScreen';
 import ObservacionRegionScreen from '../screens/ObservacionRegionScreen';
+import PedidoScreen from '../screens/PedidoScreen';
 import ResumenDiaScreen from '../screens/ResumenDiaScreen';
 import RutaScreen from '../screens/RutaScreen';
 import TiendasRegionScreen from '../screens/TiendasRegionScreen';
@@ -49,7 +49,7 @@ export default function RootNavigator({ autenticado }: { autenticado: boolean })
             <Stack.Screen name="Ruta" component={RutaScreen} options={{ title: '', headerBackVisible: false }} />
             <Stack.Screen name="NuevaVisita" component={NuevaVisitaScreen} options={{ title: '' }} />
             <Stack.Screen name="TipoVisita" component={TipoVisitaScreen} options={{ title: '' }} />
-            <Stack.Screen name="DetalleVenta" component={DetalleVentaScreen} options={{ title: '' }} />
+            <Stack.Screen name="Pedido" component={PedidoScreen} options={{ title: '' }} />
             <Stack.Screen name="FotoAntes" component={FotoAntesScreen} options={{ title: '' }} />
             <Stack.Screen name="FotoDespues" component={FotoDespuesScreen} options={{ title: '' }} />
             <Stack.Screen name="Observaciones" component={ObservacionesScreen} options={{ title: '' }} />

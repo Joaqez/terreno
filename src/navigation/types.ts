@@ -4,7 +4,7 @@ export type RootStackParamList = {
   Ruta: undefined;
   NuevaVisita: undefined;
   TipoVisita: { tiendaId: string };
-  DetalleVenta: { tiendaId: string };
+  Pedido: { tiendaId: string };
   FotoAntes: { tiendaId: string };
   FotoDespues: { tiendaId: string; tipo: 'venta' | 'mantencion' };
   Observaciones: { tiendaId: string; tipo: 'venta' | 'mantencion' };

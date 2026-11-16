@@ -14,7 +14,7 @@ import {
 } from 'firebase/firestore';
 import { db } from './firebase';
 import { escribirConCola, guardarCache, leerCache, reintentarPendientes } from './offline';
-import { JornadaVendedor, Tienda, Vendedor, Visita } from '../types';
+import { ItemPedido, JornadaVendedor, Producto, Tienda, Vendedor, Visita } from '../types';
 
 const vendedorVacio: Vendedor = { id: '', nombre: '', email: '', rol: 'vendedor', minimoDiario: 0 };
 
@@ -37,8 +37,7 @@ const vendedorVacio: Vendedor = { id: '', nombre: '', email: '', rol: 'vendedor'
 export interface BorradorVisita {
   tiendaId: string;
   tipo?: 'venta' | 'mantencion';
-  tipoVenta?: 'nueva' | 'acordada';
-  numeroFactura?: string;
+  pedido?: ItemPedido[];
   fotoAntesUrl?: string;
   fotoDespuesUrl?: string;
   horaInicio: string;
@@ -48,6 +47,7 @@ const tiendasCol = collection(db, 'tiendas');
 const jornadasCol = collection(db, 'jornadas');
 const visitasCol = collection(db, 'visitas');
 const vendedoresCol = collection(db, 'vendedores');
+const productosCol = collection(db, 'productos');
 
 export function idJornadaDeHoy(vendedorId: string) {
   const hoy = new Date().toISOString().slice(0, 10);
@@ -58,10 +58,12 @@ export function idJornadaDeHoy(vendedorId: string) {
  * cerrar sesión (si no, un segundo login en el mismo dispositivo apilaría
  * un listener nuevo cada vez). */
 let unsubTiendas: Unsubscribe | null = null;
+let unsubProductos: Unsubscribe | null = null;
 
 interface TerrenoState {
   vendedor: Vendedor;
   tiendas: Tienda[];
+  productos: Producto[];
   jornada: JornadaVendedor | null;
   visitas: Visita[];
   borrador: BorradorVisita | null;
@@ -103,6 +105,7 @@ interface TerrenoState {
 export const useTerrenoStore = create<TerrenoState>((set, get) => ({
   vendedor: vendedorVacio,
   tiendas: [],
+  productos: [],
   jornada: null,
   visitas: [],
   borrador: null,
@@ -126,9 +129,12 @@ export const useTerrenoStore = create<TerrenoState>((set, get) => ({
   cerrarSesionLocal: () => {
     unsubTiendas?.();
     unsubTiendas = null;
+    unsubProductos?.();
+    unsubProductos = null;
     set({
       vendedor: vendedorVacio,
       tiendas: [],
+      productos: [],
       jornada: null,
       visitas: [],
       borrador: null,
@@ -146,7 +152,7 @@ export const useTerrenoStore = create<TerrenoState>((set, get) => ({
     // spinner infinito esperando una respuesta que puede no llegar.
     const cache = await leerCache(vendedorId);
     if (cache) {
-      set({ tiendas: cache.tiendas, jornada: cache.jornada, visitas: cache.visitas });
+      set({ tiendas: cache.tiendas, productos: cache.productos ?? [], jornada: cache.jornada, visitas: cache.visitas });
     }
     set({ cargandoInicial: false });
 
@@ -160,6 +166,14 @@ export const useTerrenoStore = create<TerrenoState>((set, get) => ({
       unsubTiendas?.();
       unsubTiendas = onSnapshot(tiendasCol, (snap) => {
         set({ tiendas: snap.docs.map((d) => ({ id: d.id, ...d.data() }) as Tienda) });
+      });
+      unsubProductos?.();
+      unsubProductos = onSnapshot(productosCol, (snap) => {
+        set({
+          productos: snap.docs
+            .map((d) => ({ id: d.id, ...d.data() }) as Producto)
+            .sort((a, b) => a.nombre.localeCompare(b.nombre)),
+        });
       });
 
       // Perfil del vendedor (rol, meta diaria) — vive aparte de Firebase Auth
@@ -293,8 +307,7 @@ export const useTerrenoStore = create<TerrenoState>((set, get) => ({
       tiendaId: b.tiendaId,
       modo: 'presencial',
       tipo: b.tipo,
-      tipoVenta: b.tipoVenta,
-      numeroFactura: b.numeroFactura,
+      pedido: b.pedido,
       fotoAntesUrl: b.fotoAntesUrl,
       fotoDespuesUrl: b.fotoDespuesUrl,
       observaciones,
@@ -342,8 +355,16 @@ export const useTerrenoStore = create<TerrenoState>((set, get) => ({
 useTerrenoStore.subscribe((estado, anterior) => {
   if (
     estado.vendedor.id &&
-    (estado.tiendas !== anterior.tiendas || estado.jornada !== anterior.jornada || estado.visitas !== anterior.visitas)
+    (estado.tiendas !== anterior.tiendas ||
+      estado.productos !== anterior.productos ||
+      estado.jornada !== anterior.jornada ||
+      estado.visitas !== anterior.visitas)
   ) {
-    guardarCache(estado.vendedor.id, { tiendas: estado.tiendas, jornada: estado.jornada, visitas: estado.visitas });
+    guardarCache(estado.vendedor.id, {
+      tiendas: estado.tiendas,
+      productos: estado.productos,
+      jornada: estado.jornada,
+      visitas: estado.visitas,
+    });
   }
 });

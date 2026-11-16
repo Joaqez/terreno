@@ -17,7 +17,21 @@ export type TipoNegocio =
 export type TipoVisita = 'venta' | 'mantencion';
 export type ModoVisita = 'presencial' | 'rapida';
 
-export type TipoVenta = 'nueva' | 'acordada';
+/** Producto del catálogo para armar pedidos (colección `productos`, doc id = SKU). */
+export interface Producto {
+  id: string;
+  nombre: string;
+  sku: string;
+  marca: string;
+}
+
+/** Línea de un pedido. Copia nombre/sku para que el pedido siga legible si el producto cambia o se borra del catálogo. */
+export interface ItemPedido {
+  productoId: string;
+  nombre: string;
+  sku: string;
+  cantidad: number;
+}
 
 export interface Tienda {
   id: string;
@@ -55,8 +69,8 @@ export interface Visita {
 
   // Presente solo si modo === 'presencial'
   tipo?: TipoVisita;
-  tipoVenta?: TipoVenta;
-  numeroFactura?: string;
+  /** Productos solicitados — solo si tipo === 'venta'. */
+  pedido?: ItemPedido[];
   fotoAntesUrl?: string;
   fotoDespuesUrl?: string;
   observaciones?: string;
