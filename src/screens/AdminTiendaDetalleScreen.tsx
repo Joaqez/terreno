@@ -101,7 +101,13 @@ export default function AdminTiendaDetalleScreen({ navigation, route }: Props) {
 
         <Text style={styles.etiqueta}>Jefes de tienda ({jefesActivos.length})</Text>
         {jefesActivos.map((j) => (
-          <FilaJefe key={j.id} jefe={j} detalle={detalleJefe(j)} onEditar={() => setJefeEditando(j)} />
+          <FilaJefe
+            key={j.id}
+            jefe={j}
+            detalle={detalleJefe(j)}
+            onPress={() => navigation.navigate('AdminJefeDetalle', { jefeId: j.id })}
+            onEditar={() => setJefeEditando(j)}
+          />
         ))}
         <Pressable style={styles.nuevoJefe} onPress={() => setJefeEditando(null)}>
           <Text style={styles.nuevoJefeTexto}>+ Nuevo jefe de tienda</Text>
@@ -113,7 +119,10 @@ export default function AdminTiendaDetalleScreen({ navigation, route }: Props) {
               <FilaJefe
                 key={j.id}
                 jefe={j}
-                detalle={`${detalleJefe(j)}\nDado de baja el ${formatearFecha(j.bajaEn!)} por ${nombreVendedor(j.bajaPorId)}`}
+                detalle={`${detalleJefe(j)}${
+                  j.bajaEn ? `\nDado de baja el ${formatearFecha(j.bajaEn)} por ${nombreVendedor(j.bajaPorId)}` : ''
+                }`}
+                onPress={() => navigation.navigate('AdminJefeDetalle', { jefeId: j.id })}
               />
             ))}
           </>
@@ -193,15 +202,25 @@ export default function AdminTiendaDetalleScreen({ navigation, route }: Props) {
   );
 }
 
-function FilaJefe({ jefe, detalle, onEditar }: { jefe: JefeTienda; detalle: string; onEditar?: () => void }) {
+function FilaJefe({
+  jefe,
+  detalle,
+  onPress,
+  onEditar,
+}: {
+  jefe: JefeTienda;
+  detalle: string;
+  onPress: () => void;
+  onEditar?: () => void;
+}) {
   return (
-    <View style={[styles.card, styles.filaJefe, !jefe.activo && { opacity: 0.6 }]}>
+    <Pressable style={[styles.card, styles.filaJefe, !jefe.activo && { opacity: 0.6 }]} onPress={onPress}>
       <View style={{ flex: 1 }}>
         <Text style={styles.jefeNombre}>{jefe.nombre}</Text>
         <Text style={styles.jefeDetalle}>{detalle}</Text>
       </View>
       {onEditar ? <TextLink title="Editar" onPress={onEditar} /> : null}
-    </View>
+    </Pressable>
   );
 }
 

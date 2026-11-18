@@ -57,6 +57,37 @@ export interface JefeTienda {
   bajaEn?: string; // ISO
 }
 
+/** Pregunta del checklist de mantención del exhibidor (colección
+ * `preguntasMantencion`). La editan los supervisores desde el panel. */
+export interface PreguntaMantencion {
+  id: string;
+  texto: string;
+  /** Orden en que se muestra (ascendente). */
+  orden: number;
+  /** false = no se pregunta en visitas nuevas (se conserva para no perder el historial). */
+  activa: boolean;
+}
+
+export type RespuestaChecklist = 'si' | 'no' | 'na';
+
+/** Respuesta guardada en la visita. Copia el texto de la pregunta para que
+ * siga legible si la pregunta se edita o se desactiva después. */
+export interface ItemChecklist {
+  preguntaId: string;
+  pregunta: string;
+  respuesta: RespuestaChecklist;
+}
+
+/** Dónde estaba el vendedor al empezar la visita (respaldo + sirve para
+ * corregir coordenadas de tiendas mal ubicadas). */
+export interface UbicacionVisita {
+  lat: number;
+  lng: number;
+  precisionM: number | null;
+  /** Distancia a la tienda en metros; null si la tienda no tiene coordenadas. */
+  distanciaTiendaM: number | null;
+}
+
 export interface Tienda {
   id: string;
   nombre: string;
@@ -92,9 +123,14 @@ export interface Visita {
   modo: ModoVisita;
 
   // Presente solo si modo === 'presencial'
+  /** 'venta' = "Con pedido", 'mantencion' = "Sin pedido" (desde 2026-11-18 la
+   * app ya no habla de venta/mantención; el valor interno se mantiene). */
   tipo?: TipoVisita;
   /** Productos solicitados — solo si tipo === 'venta'. */
   pedido?: ItemPedido[];
+  /** Checklist de mantención del exhibidor (todas las visitas presenciales desde 2026-11-18). */
+  checklist?: ItemChecklist[];
+  ubicacionVendedor?: UbicacionVisita;
   fotoAntesUrl?: string;
   fotoDespuesUrl?: string;
   observaciones?: string;

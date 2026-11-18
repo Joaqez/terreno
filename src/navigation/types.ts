@@ -7,6 +7,7 @@ export type RootStackParamList = {
   Pedido: { tiendaId: string };
   FotoAntes: { tiendaId: string };
   JefeTienda: { tiendaId: string };
+  Checklist: { tiendaId: string; tipo: 'venta' | 'mantencion' };
   FotoDespues: { tiendaId: string; tipo: 'venta' | 'mantencion' };
   Observaciones: { tiendaId: string; tipo: 'venta' | 'mantencion' };
   VisitaRegistrada: { tiendaId: string };
@@ -18,6 +19,9 @@ export type RootStackParamList = {
   AdminVendedorDetalle: { vendedorId: string };
   AdminVisitas: undefined;
   AdminVisitaDetalle: { visitaId: string };
+  AdminJefes: undefined;
+  AdminJefeDetalle: { jefeId: string };
+  AdminChecklist: undefined;
   TiendasRegion: undefined;
   ObservacionRegion: { tiendaId: string };
 };

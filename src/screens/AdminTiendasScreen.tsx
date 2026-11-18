@@ -54,9 +54,11 @@ export default function AdminTiendasScreen({ navigation }: Props) {
       <Title>Administración de tiendas</Title>
       <Subtitle>{filtradas.length} de {tiendas.length} tiendas</Subtitle>
 
-      <View style={{ marginBottom: spacing.md, flexDirection: 'row', gap: spacing.lg }}>
+      <View style={{ marginBottom: spacing.md, flexDirection: 'row', flexWrap: 'wrap', columnGap: spacing.lg, rowGap: spacing.sm }}>
         <TextLink title="Ver visitas →" onPress={() => navigation.navigate('AdminVisitas')} />
+        <TextLink title="Jefes de tienda →" onPress={() => navigation.navigate('AdminJefes')} />
         <TextLink title="Ver vendedores →" onPress={() => navigation.navigate('AdminVendedores')} />
+        <TextLink title="Checklist de mantención →" onPress={() => navigation.navigate('AdminChecklist')} />
       </View>
 
       <Field placeholder="Buscar por nombre o comuna" value={busqueda} onChangeText={setBusqueda} label="Buscar" />

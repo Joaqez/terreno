@@ -97,7 +97,7 @@ export default function JefeTiendaModal({
             />
             <PrimaryButton title="Guardar" disabled={!nombre.trim()} onPress={guardar} />
 
-            {jefe ? (
+            {jefe?.activo ? (
               <View style={styles.baja}>
                 {confirmandoBaja ? (
                   <>

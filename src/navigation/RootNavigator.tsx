@@ -2,7 +2,11 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import React from 'react';
 import { colors } from '../theme';
+import AdminChecklistScreen from '../screens/AdminChecklistScreen';
+import AdminJefeDetalleScreen from '../screens/AdminJefeDetalleScreen';
+import AdminJefesScreen from '../screens/AdminJefesScreen';
 import AdminTiendaDetalleScreen from '../screens/AdminTiendaDetalleScreen';
+import ChecklistScreen from '../screens/ChecklistScreen';
 import AdminTiendasScreen from '../screens/AdminTiendasScreen';
 import AdminVendedorDetalleScreen from '../screens/AdminVendedorDetalleScreen';
 import AdminVendedoresScreen from '../screens/AdminVendedoresScreen';
@@ -53,6 +57,7 @@ export default function RootNavigator({ autenticado }: { autenticado: boolean })
             <Stack.Screen name="Pedido" component={PedidoScreen} options={{ title: '' }} />
             <Stack.Screen name="FotoAntes" component={FotoAntesScreen} options={{ title: '' }} />
             <Stack.Screen name="JefeTienda" component={JefeTiendaScreen} options={{ title: '' }} />
+            <Stack.Screen name="Checklist" component={ChecklistScreen} options={{ title: '' }} />
             <Stack.Screen name="FotoDespues" component={FotoDespuesScreen} options={{ title: '' }} />
             <Stack.Screen name="Observaciones" component={ObservacionesScreen} options={{ title: '' }} />
             <Stack.Screen
@@ -80,6 +85,9 @@ export default function RootNavigator({ autenticado }: { autenticado: boolean })
             />
             <Stack.Screen name="AdminVisitas" component={AdminVisitasScreen} options={{ title: 'Visitas' }} />
             <Stack.Screen name="AdminVisitaDetalle" component={AdminVisitaDetalleScreen} options={{ title: '' }} />
+            <Stack.Screen name="AdminJefes" component={AdminJefesScreen} options={{ title: 'Jefes de tienda' }} />
+            <Stack.Screen name="AdminJefeDetalle" component={AdminJefeDetalleScreen} options={{ title: '' }} />
+            <Stack.Screen name="AdminChecklist" component={AdminChecklistScreen} options={{ title: 'Checklist' }} />
             <Stack.Screen name="TiendasRegion" component={TiendasRegionScreen} options={{ title: 'Región' }} />
             <Stack.Screen name="ObservacionRegion" component={ObservacionRegionScreen} options={{ title: '' }} />
           </>

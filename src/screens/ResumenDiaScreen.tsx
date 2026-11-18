@@ -36,9 +36,9 @@ export default function ResumenDiaScreen() {
               {item.modo === 'rapida' ? (
                 <Badge tone="neutral">Gestión rápida</Badge>
               ) : item.tipo === 'venta' ? (
-                <Badge tone="accent">{`Venta · ${(item.pedido ?? []).reduce((n, i) => n + i.cantidad, 0)} u.`}</Badge>
+                <Badge tone="accent">{`Con pedido · ${(item.pedido ?? []).reduce((n, i) => n + i.cantidad, 0)} u.`}</Badge>
               ) : (
-                <Badge tone="neutral">Mantención</Badge>
+                <Badge tone="neutral">Sin pedido</Badge>
               )}
             </View>
           );
@@ -52,8 +52,8 @@ export default function ResumenDiaScreen() {
 
             <View style={styles.statGrid}>
               <Stat num={`${visitadas}/${metaDelDia}`} lbl="Tiendas mínimas" />
-              <Stat num={String(ventas)} lbl="Ventas" />
-              <Stat num={String(mantenciones)} lbl="Mantenciones" />
+              <Stat num={String(ventas)} lbl="Con pedido" />
+              <Stat num={String(mantenciones)} lbl="Sin pedido" />
               <Stat num={String(gestiones)} lbl="Gestiones rápidas" />
             </View>
 

@@ -22,9 +22,9 @@ export function etiquetaVisita(v: Visita): { texto: string; tono: 'done' | 'acce
   if (v.modo === 'rapida') return { texto: 'Gestionada', tono: 'pending' };
   if (v.tipo === 'venta') {
     const unidades = (v.pedido ?? []).reduce((n, i) => n + i.cantidad, 0);
-    return { texto: unidades ? `Venta · ${unidades} u.` : 'Venta', tono: 'accent' };
+    return { texto: unidades ? `Con pedido · ${unidades} u.` : 'Con pedido', tono: 'accent' };
   }
-  return { texto: 'Mantención', tono: 'done' };
+  return { texto: 'Sin pedido', tono: 'done' };
 }
 
 export default function VisitaFila({

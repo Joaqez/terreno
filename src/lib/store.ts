@@ -14,7 +14,18 @@ import {
 } from 'firebase/firestore';
 import { db } from './firebase';
 import { escribirConCola, guardarCache, leerCache, reintentarPendientes } from './offline';
-import { ItemPedido, JefeTienda, JornadaVendedor, Producto, Tienda, Vendedor, Visita } from '../types';
+import {
+  ItemChecklist,
+  ItemPedido,
+  JefeTienda,
+  JornadaVendedor,
+  PreguntaMantencion,
+  Producto,
+  Tienda,
+  UbicacionVisita,
+  Vendedor,
+  Visita,
+} from '../types';
 
 /** Datos editables de un jefe de tienda (lo que pide el formulario). */
 export type DatosJefeTienda = Pick<JefeTienda, 'nombre' | 'telefono' | 'email'>;
@@ -35,7 +46,7 @@ const vendedorVacio: Vendedor = { id: '', nombre: '', email: '', rol: 'vendedor'
  */
 
 /** Borrador de la visita presencial en curso: se va llenando pantalla por
- * pantalla (foto antes → jefe de tienda → ¿necesita stock? → pedido → foto después
+ * pantalla (foto antes → jefe de tienda → ¿pedido? → pedido → checklist → foto después
  * → observaciones) y se vuelca a una Visita real recién en "Finalizar visita". */
 export interface BorradorVisita {
   tiendaId: string;
@@ -45,6 +56,8 @@ export interface BorradorVisita {
   fotoDespuesUrl?: string;
   jefeTiendaId?: string;
   jefeTiendaNombre?: string;
+  checklist?: ItemChecklist[];
+  ubicacionVendedor?: UbicacionVisita;
   horaInicio: string;
 }
 
@@ -54,6 +67,7 @@ const visitasCol = collection(db, 'visitas');
 const vendedoresCol = collection(db, 'vendedores');
 const productosCol = collection(db, 'productos');
 const jefesTiendaCol = collection(db, 'jefesTienda');
+const preguntasCol = collection(db, 'preguntasMantencion');
 
 export function idJornadaDeHoy(vendedorId: string) {
   const hoy = new Date().toISOString().slice(0, 10);
@@ -66,6 +80,7 @@ export function idJornadaDeHoy(vendedorId: string) {
 let unsubTiendas: Unsubscribe | null = null;
 let unsubProductos: Unsubscribe | null = null;
 let unsubJefes: Unsubscribe | null = null;
+let unsubPreguntas: Unsubscribe | null = null;
 
 interface TerrenoState {
   vendedor: Vendedor;
@@ -73,6 +88,8 @@ interface TerrenoState {
   productos: Producto[];
   /** Todos los jefes de tienda (activos y dados de baja) de todas las tiendas. */
   jefesTienda: JefeTienda[];
+  /** Checklist de mantención, ordenado por `orden` (activas e inactivas). */
+  preguntasMantencion: PreguntaMantencion[];
   jornada: JornadaVendedor | null;
   visitas: Visita[];
   borrador: BorradorVisita | null;
@@ -104,6 +121,12 @@ interface TerrenoState {
   crearJefeTienda: (tiendaId: string, datos: DatosJefeTienda) => JefeTienda;
   actualizarJefeTienda: (jefeId: string, datos: DatosJefeTienda) => void;
   darDeBajaJefeTienda: (jefeId: string) => void;
+  reactivarJefeTienda: (jefeId: string) => void;
+
+  /** Checklist de mantención (panel de administración). */
+  crearPreguntaMantencion: (texto: string) => void;
+  actualizarPreguntaMantencion: (id: string, cambios: Partial<Pick<PreguntaMantencion, 'texto' | 'activa'>>) => void;
+  moverPreguntaMantencion: (id: string, direccion: -1 | 1) => void;
 
   iniciarBorrador: (tiendaId: string) => void;
   actualizarBorrador: (cambios: Partial<BorradorVisita>) => void;
@@ -121,6 +144,7 @@ export const useTerrenoStore = create<TerrenoState>((set, get) => ({
   tiendas: [],
   productos: [],
   jefesTienda: [],
+  preguntasMantencion: [],
   jornada: null,
   visitas: [],
   borrador: null,
@@ -148,11 +172,14 @@ export const useTerrenoStore = create<TerrenoState>((set, get) => ({
     unsubProductos = null;
     unsubJefes?.();
     unsubJefes = null;
+    unsubPreguntas?.();
+    unsubPreguntas = null;
     set({
       vendedor: vendedorVacio,
       tiendas: [],
       productos: [],
       jefesTienda: [],
+      preguntasMantencion: [],
       jornada: null,
       visitas: [],
       borrador: null,
@@ -174,6 +201,7 @@ export const useTerrenoStore = create<TerrenoState>((set, get) => ({
         tiendas: cache.tiendas,
         productos: cache.productos ?? [],
         jefesTienda: cache.jefesTienda ?? [],
+        preguntasMantencion: cache.preguntasMantencion ?? [],
         jornada: cache.jornada,
         visitas: cache.visitas,
       });
@@ -205,6 +233,14 @@ export const useTerrenoStore = create<TerrenoState>((set, get) => ({
           jefesTienda: snap.docs
             .map((d) => ({ id: d.id, ...d.data() }) as JefeTienda)
             .sort((a, b) => a.nombre.localeCompare(b.nombre)),
+        });
+      });
+      unsubPreguntas?.();
+      unsubPreguntas = onSnapshot(preguntasCol, (snap) => {
+        set({
+          preguntasMantencion: snap.docs
+            .map((d) => ({ id: d.id, ...d.data() }) as PreguntaMantencion)
+            .sort((a, b) => a.orden - b.orden),
         });
       });
 
@@ -364,6 +400,45 @@ export const useTerrenoStore = create<TerrenoState>((set, get) => ({
     escribirConCola('jefesTienda', jefeId, 'update', cambios);
   },
 
+  reactivarJefeTienda: (jefeId) => {
+    // '' en vez de undefined, por el mismo motivo que en actualizarJefeTienda.
+    const cambios = { activo: true, bajaPorId: '', bajaEn: '' };
+    set({ jefesTienda: get().jefesTienda.map((j) => (j.id === jefeId ? { ...j, ...cambios } : j)) });
+    escribirConCola('jefesTienda', jefeId, 'update', cambios);
+  },
+
+  crearPreguntaMantencion: (texto) => {
+    const ref = doc(preguntasCol);
+    const preguntas = get().preguntasMantencion;
+    const nueva: PreguntaMantencion = {
+      id: ref.id,
+      texto: texto.trim(),
+      orden: preguntas.length ? Math.max(...preguntas.map((p) => p.orden)) + 1 : 1,
+      activa: true,
+    };
+    set({ preguntasMantencion: [...preguntas, nueva] });
+    escribirConCola('preguntasMantencion', nueva.id, 'set', nueva);
+  },
+
+  actualizarPreguntaMantencion: (id, cambios) => {
+    const limpios = cambios.texto != null ? { ...cambios, texto: cambios.texto.trim() } : cambios;
+    set({ preguntasMantencion: get().preguntasMantencion.map((p) => (p.id === id ? { ...p, ...limpios } : p)) });
+    escribirConCola('preguntasMantencion', id, 'update', limpios);
+  },
+
+  moverPreguntaMantencion: (id, direccion) => {
+    const lista = [...get().preguntasMantencion];
+    const i = lista.findIndex((p) => p.id === id);
+    const j = i + direccion;
+    if (i < 0 || j < 0 || j >= lista.length) return;
+    [lista[i], lista[j]] = [lista[j], lista[i]];
+    // Renumera todo 1..n: deja el orden limpio aunque haya habido empates.
+    const renumeradas = lista.map((p, k) => ({ ...p, orden: k + 1 }));
+    const cambiadas = renumeradas.filter((p) => get().preguntasMantencion.find((x) => x.id === p.id)?.orden !== p.orden);
+    set({ preguntasMantencion: renumeradas });
+    cambiadas.forEach((p) => escribirConCola('preguntasMantencion', p.id, 'update', { orden: p.orden }));
+  },
+
   iniciarBorrador: (tiendaId) => {
     set({ borrador: { tiendaId, horaInicio: new Date().toISOString() } });
   },
@@ -386,6 +461,8 @@ export const useTerrenoStore = create<TerrenoState>((set, get) => ({
       fotoDespuesUrl: b.fotoDespuesUrl,
       jefeTiendaId: b.jefeTiendaId,
       jefeTiendaNombre: b.jefeTiendaNombre,
+      checklist: b.checklist,
+      ubicacionVendedor: b.ubicacionVendedor,
       observaciones,
       horaInicio: b.horaInicio,
       horaFin: new Date().toISOString(),
@@ -434,6 +511,7 @@ useTerrenoStore.subscribe((estado, anterior) => {
     (estado.tiendas !== anterior.tiendas ||
       estado.productos !== anterior.productos ||
       estado.jefesTienda !== anterior.jefesTienda ||
+      estado.preguntasMantencion !== anterior.preguntasMantencion ||
       estado.jornada !== anterior.jornada ||
       estado.visitas !== anterior.visitas)
   ) {
@@ -441,6 +519,7 @@ useTerrenoStore.subscribe((estado, anterior) => {
       tiendas: estado.tiendas,
       productos: estado.productos,
       jefesTienda: estado.jefesTienda,
+      preguntasMantencion: estado.preguntasMantencion,
       jornada: estado.jornada,
       visitas: estado.visitas,
     });

@@ -9,38 +9,40 @@ import { RootStackParamList } from '../navigation/types';
 type Props = NativeStackScreenProps<RootStackParamList, 'TipoVisita'>;
 
 /**
- * Pantalla clave del feedback de la reunión del 2026-09-07: la mayoría de las
- * visitas son de venta, así que el flujo real es "foto → preguntar en la
- * tienda si necesitan stock → recién ahí se sabe si es venta o mantención",
- * en vez de pedirle al vendedor que elija el tipo de visita antes de hablar
- * con el encargado. Ver CLAUDE.md.
+ * "¿Hay pedido?" — desde 2026-11-18 la app ya no distingue venta de
+ * mantención: solo "Con pedido" (abre la lista de productos) o "Sin pedido".
+ * En ambos casos después viene el checklist del exhibidor. Internamente se
+ * sigue guardando `tipo: 'venta' | 'mantencion'` para no romper las visitas
+ * antiguas. Ver CLAUDE.md.
  */
 export default function TipoVisitaScreen({ navigation, route }: Props) {
   const { tiendaId } = route.params;
-  const { tiendas, actualizarBorrador } = useTerrenoStore();
+  const { tiendas, actualizarBorrador, preguntasMantencion } = useTerrenoStore();
   const tienda = tiendas.find((t) => t.id === tiendaId);
 
   function elegir(tipo: 'venta' | 'mantencion') {
-    actualizarBorrador({ tipo });
     if (tipo === 'venta') {
+      actualizarBorrador({ tipo });
       navigation.navigate('Pedido', { tiendaId });
     } else {
-      navigation.navigate('FotoDespues', { tiendaId, tipo });
+      // Si antes eligió "Con pedido" y volvió atrás, se descarta ese pedido.
+      actualizarBorrador({ tipo, pedido: undefined });
+      navigation.navigate(preguntasMantencion.some((p) => p.activa) ? 'Checklist' : 'FotoDespues', { tiendaId, tipo });
     }
   }
 
   return (
     <Screen>
       <Title>{tienda?.nombre ?? 'Tienda'}</Title>
-      <Subtitle>¿La tienda necesita más stock de nuestros productos? Pregúntale al encargado antes de continuar.</Subtitle>
+      <Subtitle>¿La tienda hace un pedido de nuestros productos?</Subtitle>
 
       <Pressable style={styles.choice} onPress={() => elegir('venta')}>
         <View style={styles.icon}>
-          <Text>🚚</Text>
+          <Text>📦</Text>
         </View>
         <View style={{ flex: 1 }}>
-          <Text style={styles.choiceTitle}>Sí, necesitan stock</Text>
-          <Text style={styles.choiceText}>Se registra como venta: eliges los productos y cantidades del pedido.</Text>
+          <Text style={styles.choiceTitle}>Con pedido</Text>
+          <Text style={styles.choiceText}>Eliges los productos y cantidades del pedido.</Text>
         </View>
       </Pressable>
 
@@ -49,8 +51,8 @@ export default function TipoVisitaScreen({ navigation, route }: Props) {
           <Text>🔧</Text>
         </View>
         <View style={{ flex: 1 }}>
-          <Text style={styles.choiceTitle}>No necesitan por ahora</Text>
-          <Text style={styles.choiceText}>Se registra como mantención, sin entrega de producto.</Text>
+          <Text style={styles.choiceTitle}>Sin pedido</Text>
+          <Text style={styles.choiceText}>Sigues directo con la mantención del exhibidor.</Text>
         </View>
       </Pressable>
     </Screen>

@@ -19,7 +19,7 @@ function normalizar(texto: string) {
 
 export default function PedidoScreen({ navigation, route }: Props) {
   const { tiendaId } = route.params;
-  const { tiendas, productos: catalogo, borrador, actualizarBorrador } = useTerrenoStore();
+  const { tiendas, productos: catalogo, borrador, actualizarBorrador, preguntasMantencion } = useTerrenoStore();
   const tienda = tiendas.find((t) => t.id === tiendaId);
   const productos = useMemo(() => productosParaTienda(catalogo, tienda), [catalogo, tienda]);
   const [busqueda, setBusqueda] = useState('');
@@ -53,7 +53,10 @@ export default function PedidoScreen({ navigation, route }: Props) {
       cantidad: cantidades[p.id],
     }));
     actualizarBorrador({ pedido });
-    navigation.navigate('FotoDespues', { tiendaId, tipo: 'venta' });
+    navigation.navigate(preguntasMantencion.some((p) => p.activa) ? 'Checklist' : 'FotoDespues', {
+      tiendaId,
+      tipo: 'venta',
+    });
   }
 
   return (

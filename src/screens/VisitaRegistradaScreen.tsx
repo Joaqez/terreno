@@ -26,13 +26,19 @@ export default function VisitaRegistradaScreen({ navigation, route }: Props) {
 
       <Card>
         <Row k="Tienda" v={tienda?.nombre ?? '—'} />
-        <Row k="Tipo de visita" v={visita?.tipo === 'venta' ? 'Venta' : 'Mantención'} />
+        <Row k="Pedido" v={visita?.tipo === 'venta' ? 'Con pedido' : 'Sin pedido'} />
         {visita?.tipo === 'venta' && (
           <Row
-            k="Pedido"
+            k="Productos"
             v={`${visita.pedido?.length ?? 0} productos · ${(visita.pedido ?? []).reduce((n, i) => n + i.cantidad, 0)} unidades`}
           />
         )}
+        {visita?.checklist?.length ? (
+          <Row
+            k="Checklist"
+            v={`${visita.checklist.filter((i) => i.respuesta === 'no').length} con "No" de ${visita.checklist.length}`}
+          />
+        ) : null}
         <Row k="Fotos" v="Antes ✓ · Después ✓" />
       </Card>
 

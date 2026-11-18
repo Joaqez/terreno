@@ -51,8 +51,9 @@ Estructura de pantallas y su equivalente en `src/screens/`:
 7. Visita rápida / gestión sin visita presencial — modal dentro de `RutaScreen`
 8. Foto antes — `FotoAntesScreen`
 8b. ¿Con quién hablaste? (jefe de tienda) — `JefeTiendaScreen` (agregada 2026-11-16)
-9. ¿Necesita stock? (tipo de visita) — `TipoVisitaScreen`
+9. ¿Hay pedido? (Con pedido / Sin pedido) — `TipoVisitaScreen` (antes "¿Necesita stock?", cambió 2026-11-18)
 10. Pedido (productos y cantidades) — `PedidoScreen` (reemplazó a "Detalle de venta" el 2026-11-16)
+10b. Checklist de mantención del exhibidor — `ChecklistScreen` (agregada 2026-11-18)
 11. Foto después — `FotoDespuesScreen`
 12. Observaciones — `ObservacionesScreen`
 13. Visita registrada (confirmación) — `VisitaRegistradaScreen`
@@ -90,6 +91,38 @@ Excel original ("San Plablo" en vez de "San Pablo"), dejado pendiente a
 propósito. Esto sigue siendo la distancia en **línea recta**, no ruteo real
 por calles — eso sigue siendo el paso 8 del roadmap (Google Directions),
 todavía no implementado.
+
+**Bug arreglado 2026-11-18 — ubicación desactualizada:** en el primer día
+real (2026-11-16) la ruta siguió calculando distancias como si el vendedor
+estuviera en Chamisero después de volver a la ciudad. Dos causas: (1) la
+ubicación se pedía una sola vez al montar `RutaScreen`, que queda montada
+todo el día debajo del resto del stack; (2) en web, `expo-location` llama a
+`navigator.geolocation.getCurrentPosition` con `maximumAge: Infinity`, o sea
+que el navegador podía devolver una posición vieja de caché. Ahora
+`useUbicacionActual()` usa `watchPositionAsync` (precisión media, cada
+~100 m / 30 s, para cuidar batería), la ruta muestra "Ubicación actualizada
+hace X min · ±N m" con botón "Actualizar", y `obtenerUbicacionPrecisa()`
+fuerza `maximumAge: 0`. **No volver a usar `getCurrentPositionAsync` sin
+`maximumAge` en web.**
+
+**Ubicación en cada visita (2026-11-18):** al entrar a `FotoAntesScreen` se
+toma, en segundo plano y sin bloquear, una lectura precisa que queda en
+`Visita.ubicacionVendedor` (`{lat, lng, precisionM, distanciaTiendaM}`); el
+panel la muestra con link a Google Maps. Sirve de respaldo y para corregir
+coordenadas de tiendas mal ubicadas.
+
+**Pendiente — bloquear visitas fuera de rango (decidido 2026-11-18, NO
+implementado todavía):** no permitir iniciar una visita a más de **200 m**
+de la tienda (descontando el margen de error del GPS), con una opción
+"Iniciar igual" que exige una justificación y deja la visita marcada en el
+panel. **Antes de activarlo hay que corregir las coordenadas** de las
+tiendas con dirección por kilometraje o aproximada: el geocodificador las
+dejó en el centro de la comuna o en otro lugar (ej. Pronto Costanera E0,
+`copec-64079`, "Costanera Norte km 2": quedó cerca de Independencia y está
+en Lo Barnechea — el km se cuenta desde el oriente). Hay ~12 tiendas
+asignadas con coordenadas compartidas/aproximadas (Cantagallo, Salida Norte,
+Piedra Roja, Caren, las Costanera, etc.); revisar todas las de Santiago con
+dirección "km"/"s/n" una por una.
 
 **Asignación por vendedor — ya filtra (actualizado 2026-11-15):** el negocio
 es principalmente vendedores que cubren Santiago, con las tiendas repartidas
@@ -141,8 +174,15 @@ Desde 2026-11-16 también `AdminVisitasScreen` (link "Ver visitas" en
 `AdminTiendasScreen`): todas las visitas de todos los vendedores agrupadas por
 fecha, con filtro por vendedor y búsqueda por tienda →
 `AdminVisitaDetalleScreen` (fotos antes/después, observaciones, tipo de
-visita, productos del pedido). `AdminTiendaDetalleScreen` muestra además el historial de
-visitas de esa tienda. Carga las últimas 1000 visitas (`cargarVisitasAdmin()`
+visita, productos del pedido, checklist, ubicación del vendedor).
+`AdminTiendaDetalleScreen` muestra además el historial de visitas y los
+jefes de esa tienda. Desde 2026-11-18 también `AdminJefesScreen` (link
+"Jefes de tienda"): todos los jefes, con búsqueda por nombre/tienda/
+comuna/teléfono/correo y filtro por cadena y activos/dados de baja →
+`AdminJefeDetalleScreen` (botones Llamar / WhatsApp / Correo — los
+teléfonos se normalizan a +56 en `src/lib/contacto.ts` —, editar,
+reactivar, historial de visitas con ese jefe). Y `AdminChecklistScreen`
+(link "Checklist de mantención") para editar las preguntas del checklist. Carga las últimas 1000 visitas (`cargarVisitasAdmin()`
 en `store.ts`); si el volumen crece mucho, paginar o filtrar por fecha en la
 consulta.
 
@@ -182,8 +222,12 @@ al revés — se decide el tipo después de la conversación con el encargado:
    Después, **siempre** aparece "¿Con quién hablaste?" (`JefeTiendaScreen`):
    elige un jefe de tienda ya registrado, crea uno nuevo, o toca "Omitir"
    (ver "Jefes de tienda" abajo).
-2. Le pregunta al encargado si necesitan más stock.
-3. Si dice que sí → es una **venta**: el vendedor arma el **pedido**
+2. "¿Hay pedido?" (`TipoVisitaScreen`). **Desde 2026-11-18 la app ya no
+   habla de "venta" ni "mantención"**: solo **Con pedido** / **Sin pedido**
+   (feedback del primer uso real). Internamente `Visita.tipo` sigue siendo
+   `'venta'` (con pedido) / `'mantencion'` (sin pedido) para no romper las
+   visitas antiguas; en pantalla siempre se muestra "Con pedido"/"Sin pedido".
+3. Con pedido → el vendedor arma el **pedido**
    (`PedidoScreen`) — busca productos del catálogo y fija la cantidad de
    cada uno; se guarda en `Visita.pedido` (`ItemPedido[]`, copia nombre/SKU
    para que el pedido siga legible si el catálogo cambia) y se ve en el
@@ -205,17 +249,26 @@ al revés — se decide el tipo después de la conversación con el encargado:
    "Nueva visita") todo menos las variantes "SHELL".
    La cadena se deduce del prefijo del id de la tienda (`copec-`/`shell-`/
    `aramco-`).
-4. Si dice que no → es **mantención**: no se pide nada de venta, se salta
-   directo a la foto de después.
+4. Sin pedido → no se piden productos.
+4b. **Checklist de mantención del exhibidor** (`ChecklistScreen`, desde
+   2026-11-18) — en **todas** las visitas presenciales, con o sin pedido
+   (en todas hay exhibidor), antes de la foto de después. Preguntas Sí / No /
+   No aplica, todas obligatorias; un "No" **no** exige comentario (para eso
+   están las observaciones). Las preguntas viven en la colección
+   `preguntasMantencion` (`{texto, orden, activa}`) y las editan los
+   supervisores desde el panel (`AdminChecklistScreen`) — **no van en el
+   código**. No se borran, se desactivan. La visita guarda una copia
+   (`Visita.checklist: {preguntaId, pregunta, respuesta}[]`) para que siga
+   legible si la pregunta cambia. Si no hay ninguna pregunta activa, el paso
+   se salta solo.
 5. Foto después de la visita (`FotoDespuesScreen`), mismo ángulo que la de
    antes.
 6. Observaciones libres, opcional (`ObservacionesScreen`).
 7. Se guarda la `Visita` y se marca la tienda como visitada.
 
-No existe ya un concepto de "entrega que no sea venta" — lo que antes se
-llamaba "entrega" ahora siempre es "venta". Si en algún momento hay que
-reportar esto a Bsale, confirmar con el equipo si el término interno debe
-ser "venta" o si Bsale espera otro nombre.
+Si en algún momento hay que reportar pedidos a Bsale, confirmar con el
+equipo qué nombre espera Bsale (en la app es "pedido", internamente
+`tipo: 'venta'`).
 
 ### Jefes de tienda
 Agregado 2026-11-16. Las tiendas tienen varios jefes/encargados que cambian
@@ -235,6 +288,7 @@ seguido, y se quiere registrar con todos los que se encuentran los vendedores.
   `AdminTiendaDetalleScreen` los activos y los dados de baja, quién los
   registró y la fecha de la última visita con cada uno; también puede
   editarlos/crearlos ahí. `AdminVisitaDetalleScreen` muestra con quién se habló.
+  `AdminJefesScreen` lista todos los jefes para encontrar su contacto rápido.
 - **No** aplica a tiendas de región ni a la gestión rápida (decisión del
   equipo: quedan como estaban).
 - Carga inicial: los 223 contactos que traía el Excel de tiendas
@@ -259,7 +313,7 @@ en vez de "Visitada") tanto en la ruta como en el resumen del día.
 ### Cierre de día
 Al terminar, el vendedor confirma "Finalizar día" en `CierreDiaScreen` (sin
 kilometraje desde 2026-11-16) y la app muestra un resumen:
-tiendas visitadas vs. mínimo, ventas realizadas, mantenciones realizadas,
+tiendas visitadas vs. mínimo, visitas con pedido, visitas sin pedido,
 gestiones rápidas, y la lista completa de visitas del día con hora.
 
 ## Integración con Bsale — próxima fase, no en el alcance actual

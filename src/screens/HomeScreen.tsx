@@ -73,11 +73,11 @@ export default function HomeScreen({ navigation }: Props) {
       <View style={styles.statsRow}>
         <Card style={{ flex: 1 }}>
           <Text style={styles.statNum}>{entregas}</Text>
-          <Text style={styles.statLbl}>Ventas hoy</Text>
+          <Text style={styles.statLbl}>Con pedido hoy</Text>
         </Card>
         <Card style={{ flex: 1 }}>
           <Text style={styles.statNum}>{mantenciones}</Text>
-          <Text style={styles.statLbl}>Mantenciones hoy</Text>
+          <Text style={styles.statLbl}>Sin pedido hoy</Text>
         </Card>
       </View>
 

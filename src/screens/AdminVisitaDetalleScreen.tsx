@@ -6,6 +6,7 @@ import { etiquetaVisita, formatearFecha, formatearHora } from '../components/Vis
 import { colors, radius, spacing } from '../theme';
 import { useTerrenoStore } from '../lib/store';
 import { RootStackParamList } from '../navigation/types';
+import { RespuestaChecklist } from '../types';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'AdminVisitaDetalle'>;
 
@@ -80,6 +81,48 @@ export default function AdminVisitaDetalleScreen({ navigation, route }: Props) {
           </>
         ) : null}
 
+        {visita.checklist?.length ? (
+          <>
+            <Text style={styles.etiqueta}>
+              Checklist del exhibidor · {visita.checklist.filter((i) => i.respuesta === 'no').length} con "No"
+            </Text>
+            <View style={styles.card}>
+              {visita.checklist.map((i) => (
+                <View key={i.preguntaId} style={styles.itemPedido}>
+                  <Text style={[styles.itemNombre, { flex: 1 }]}>{i.pregunta}</Text>
+                  <Text style={[styles.respuesta, estiloRespuesta[i.respuesta]]}>{TEXTO_RESPUESTA[i.respuesta]}</Text>
+                </View>
+              ))}
+            </View>
+          </>
+        ) : null}
+
+        {visita.ubicacionVendedor ? (
+          <>
+            <Text style={styles.etiqueta}>Ubicación al iniciar la visita</Text>
+            <View style={styles.card}>
+              <Text style={styles.texto}>
+                {visita.ubicacionVendedor.distanciaTiendaM != null
+                  ? `A ${formatearMetros(visita.ubicacionVendedor.distanciaTiendaM)} de la tienda`
+                  : 'La tienda no tiene coordenadas para comparar'}
+                {visita.ubicacionVendedor.precisionM != null
+                  ? ` (precisión ±${Math.round(visita.ubicacionVendedor.precisionM)} m)`
+                  : ''}
+              </Text>
+              <View style={{ marginTop: spacing.sm }}>
+                <TextLink
+                  title="Ver en Google Maps →"
+                  onPress={() =>
+                    Linking.openURL(
+                      `https://www.google.com/maps/search/?api=1&query=${visita.ubicacionVendedor!.lat},${visita.ubicacionVendedor!.lng}`
+                    )
+                  }
+                />
+              </View>
+            </View>
+          </>
+        ) : null}
+
         <Text style={styles.etiqueta}>{visita.modo === 'rapida' ? 'Motivo de la gestión' : 'Observaciones'}</Text>
         <View style={styles.card}>
           <Text style={styles.texto}>
@@ -105,6 +148,12 @@ export default function AdminVisitaDetalleScreen({ navigation, route }: Props) {
       </ScrollView>
     </Screen>
   );
+}
+
+const TEXTO_RESPUESTA: Record<RespuestaChecklist, string> = { si: 'Sí', no: 'No', na: 'No aplica' };
+
+function formatearMetros(m: number) {
+  return m >= 1000 ? `${(m / 1000).toFixed(1)} km` : `${m} m`;
 }
 
 function Linea({ etiqueta, valor }: { etiqueta: string; valor: string }) {
@@ -134,7 +183,14 @@ function Foto({ titulo, url }: { titulo: string; url?: string }) {
   );
 }
 
+const estiloRespuesta = StyleSheet.create({
+  si: { color: colors.success },
+  no: { color: colors.danger, backgroundColor: colors.dangerSoft },
+  na: { color: colors.inkFaint },
+});
+
 const styles = StyleSheet.create({
+  respuesta: { fontSize: 13, fontWeight: '700', paddingHorizontal: 8, paddingVertical: 3, borderRadius: radius.sm, overflow: 'hidden' },
   card: { backgroundColor: colors.bgElevated, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, padding: spacing.lg },
   linea: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 5, gap: spacing.md },
   lineaEtiqueta: { fontSize: 13, color: colors.inkSoft },

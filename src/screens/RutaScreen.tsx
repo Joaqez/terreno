@@ -1,5 +1,5 @@
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { FlatList, Linking, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Badge, Card, Field, PrimaryButton, Screen, Subtitle, TextLink, Title } from '../components/ui';
 import { colors, radius, spacing } from '../theme';
@@ -13,7 +13,13 @@ type Props = NativeStackScreenProps<RootStackParamList, 'Ruta'>;
 
 export default function RutaScreen({ navigation }: Props) {
   const { tiendas, visitas, jornada, marcarGestionRapida } = useTerrenoStore();
-  const miUbicacion = useUbicacionActual();
+  const { ubicacion: miUbicacion, actualizando, sinPermiso, actualizar } = useUbicacionActual();
+  // Re-render cada 30 s para que "hace X min" no quede congelado.
+  const [ahora, setAhora] = useState(Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setAhora(Date.now()), 30000);
+    return () => clearInterval(id);
+  }, []);
   const [tiendaComoLlegar, setTiendaComoLlegar] = useState<Tienda | null>(null);
   const [errorComoLlegar, setErrorComoLlegar] = useState<string | null>(null);
   const [tiendaRapida, setTiendaRapida] = useState<Tienda | null>(null);
@@ -49,6 +55,15 @@ export default function RutaScreen({ navigation }: Props) {
   // que el número "1, 2, 3..." de cada tarjeta no coincidía con su posición
   // real en la lista. Las ya visitadas van al final, en cualquier orden.
   const asignadasOrdenadas = [...pendientesOrdenadas, ...asignadas.filter((t) => visitadasIds.has(t.id))];
+
+  function textoUbicacion() {
+    if (sinPermiso) return '📍 Sin permiso de ubicación: las distancias no son reales.';
+    if (!miUbicacion) return '📍 Buscando tu ubicación…';
+    const minutos = Math.max(0, Math.floor((ahora - miUbicacion.tomadaEn) / 60000));
+    const hace = minutos === 0 ? 'recién' : `hace ${minutos} min`;
+    const precision = miUbicacion.precisionM != null ? ` · ±${Math.round(miUbicacion.precisionM)} m` : '';
+    return `📍 Ubicación actualizada ${hace}${precision}`;
+  }
 
   async function abrirComoLlegar(app: 'waze' | 'maps') {
     if (!tiendaComoLlegar) return;
@@ -142,6 +157,11 @@ export default function RutaScreen({ navigation }: Props) {
           : '¡Ruta mínima completa!'}
       </Subtitle>
 
+      <View style={styles.ubicacionFila}>
+        <Text style={styles.ubicacionTexto}>{textoUbicacion()}</Text>
+        {!sinPermiso ? <TextLink title={actualizando ? 'Actualizando…' : 'Actualizar'} onPress={actualizar} /> : null}
+      </View>
+
       <FlatList
         data={[...asignadasOrdenadas, ...creadas]}
         keyExtractor={(t) => t.id}
@@ -217,6 +237,15 @@ export default function RutaScreen({ navigation }: Props) {
 }
 
 const styles = StyleSheet.create({
+  ubicacionFila: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
+    marginTop: -spacing.sm,
+    marginBottom: spacing.xs,
+  },
+  ubicacionTexto: { fontSize: 12, color: colors.inkSoft, flex: 1 },
   sectionLabel: {
     fontSize: 12,
     fontWeight: '700',

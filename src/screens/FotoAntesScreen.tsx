@@ -3,7 +3,9 @@ import React, { useEffect } from 'react';
 import { Image, Pressable, StyleSheet, Text } from 'react-native';
 import { PrimaryButton, Screen, Subtitle, Title } from '../components/ui';
 import { colors, radius, spacing } from '../theme';
+import { calcularDistanciaKm } from '../lib/distancia';
 import { useFotoConSubida } from '../lib/useFotoConSubida';
+import { obtenerUbicacionPrecisa } from '../lib/useUbicacionActual';
 import { useTerrenoStore } from '../lib/store';
 import { RootStackParamList } from '../navigation/types';
 
@@ -20,6 +22,17 @@ export default function FotoAntesScreen({ navigation, route }: Props) {
     if (borrador?.tiendaId !== tiendaId) {
       iniciarBorrador(tiendaId);
     }
+    // Ubicación del vendedor al empezar la visita, en segundo plano (no
+    // bloquea: si el GPS tarda o falla, la visita sigue igual). Queda en la
+    // visita como respaldo y para corregir tiendas con coordenadas malas.
+    obtenerUbicacionPrecisa().then((u) => {
+      if (!u || useTerrenoStore.getState().borrador?.tiendaId !== tiendaId) return;
+      const distanciaTiendaM =
+        tienda?.lat != null && tienda?.lng != null
+          ? Math.round(calcularDistanciaKm(u.lat, u.lng, tienda.lat, tienda.lng) * 1000)
+          : null;
+      actualizarBorrador({ ubicacionVendedor: { lat: u.lat, lng: u.lng, precisionM: u.precisionM, distanciaTiendaM } });
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tiendaId]);
 
