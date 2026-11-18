@@ -88,9 +88,12 @@ export default function AdminVisitaDetalleScreen({ navigation, route }: Props) {
             </Text>
             <View style={styles.card}>
               {visita.checklist.map((i) => (
-                <View key={i.preguntaId} style={styles.itemPedido}>
-                  <Text style={[styles.itemNombre, { flex: 1 }]}>{i.pregunta}</Text>
-                  <Text style={[styles.respuesta, estiloRespuesta[i.respuesta]]}>{TEXTO_RESPUESTA[i.respuesta]}</Text>
+                <View key={i.preguntaId}>
+                  <View style={styles.itemPedido}>
+                    <Text style={[styles.itemNombre, { flex: 1 }]}>{i.pregunta}</Text>
+                    <Text style={[styles.respuesta, estiloRespuesta[i.respuesta]]}>{TEXTO_RESPUESTA[i.respuesta]}</Text>
+                  </View>
+                  {i.comentario ? <Text style={styles.comentarioNo}>{i.comentario}</Text> : null}
                 </View>
               ))}
             </View>
@@ -190,6 +193,7 @@ const estiloRespuesta = StyleSheet.create({
 });
 
 const styles = StyleSheet.create({
+  comentarioNo: { fontSize: 12.5, color: colors.danger, marginTop: -2, marginBottom: 6, fontStyle: 'italic' },
   respuesta: { fontSize: 13, fontWeight: '700', paddingHorizontal: 8, paddingVertical: 3, borderRadius: radius.sm, overflow: 'hidden' },
   card: { backgroundColor: colors.bgElevated, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, padding: spacing.lg },
   linea: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 5, gap: spacing.md },

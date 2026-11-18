@@ -119,7 +119,8 @@ panel. **Antes de activarlo hay que corregir las coordenadas** de las
 tiendas con dirección por kilometraje o aproximada: el geocodificador las
 dejó en el centro de la comuna o en otro lugar (ej. Pronto Costanera E0,
 `copec-64079`, "Costanera Norte km 2": quedó cerca de Independencia y está
-en Lo Barnechea — el km se cuenta desde el oriente). Hay ~12 tiendas
+en Lo Barnechea — el km se cuenta desde el oriente; **ya corregida
+2026-11-18** a -33.3751547, -70.5323189, comuna Lo Barnechea). Hay ~12 tiendas
 asignadas con coordenadas compartidas/aproximadas (Cantagallo, Salida Norte,
 Piedra Roja, Caren, las Costanera, etc.); revisar todas las de Santiago con
 dirección "km"/"s/n" una por una.
@@ -253,8 +254,10 @@ al revés — se decide el tipo después de la conversación con el encargado:
 4b. **Checklist de mantención del exhibidor** (`ChecklistScreen`, desde
    2026-11-18) — en **todas** las visitas presenciales, con o sin pedido
    (en todas hay exhibidor), antes de la foto de después. Preguntas Sí / No /
-   No aplica, todas obligatorias; un "No" **no** exige comentario (para eso
-   están las observaciones). Las preguntas viven en la colección
+   No aplica, todas obligatorias. **Un "No" exige escribir cuál es el
+   problema** (campo de texto obligatorio, guardado en
+   `ItemChecklist.comentario` — corregido 2026-11-18; la primera versión no
+   lo pedía). Las preguntas viven en la colección
    `preguntasMantencion` (`{texto, orden, activa}`) y las editan los
    supervisores desde el panel (`AdminChecklistScreen`) — **no van en el
    código**. No se borran, se desactivan. La visita guarda una copia

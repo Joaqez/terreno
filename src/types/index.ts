@@ -76,6 +76,8 @@ export interface ItemChecklist {
   preguntaId: string;
   pregunta: string;
   respuesta: RespuestaChecklist;
+  /** Cuál es el problema. Obligatorio si la respuesta es "No"; solo existe en ese caso. */
+  comentario?: string;
 }
 
 /** Dónde estaba el vendedor al empezar la visita (respaldo + sirve para
