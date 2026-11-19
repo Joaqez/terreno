@@ -25,13 +25,19 @@ export default function AdminVisitasScreen({ navigation }: Props) {
   const nombreVendedor = (id: string) => vendedoresDisponibles.find((v) => v.id === id)?.nombre ?? 'Vendedor';
 
   const vendedoresConVisitas = useMemo(
-    () => vendedoresDisponibles.filter((v) => visitasAdmin.some((vi) => vi.vendedorId === v.id)),
+    () =>
+      vendedoresDisponibles.filter((v) =>
+        visitasAdmin.some((vi) => vi.vendedorId === v.id && !vi.tiendaId.endsWith('-prueba'))
+      ),
     [vendedoresDisponibles, visitasAdmin]
   );
 
   const secciones = useMemo(() => {
     const q = busqueda.trim().toLowerCase();
     const filtradas = visitasAdmin
+      // Las tiendas de prueba (copec-prueba, shell-prueba, aramco-prueba) no
+      // ensucian el listado; sus visitas se ven igual desde el detalle de la tienda.
+      .filter((v) => !v.tiendaId.endsWith('-prueba'))
       .filter((v) => !vendedorFiltro || v.vendedorId === vendedorFiltro)
       .filter((v) => !q || nombreTienda(v.tiendaId).toLowerCase().includes(q));
     const porFecha = new Map<string, Visita[]>();

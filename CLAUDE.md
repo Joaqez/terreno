@@ -177,6 +177,10 @@ Desde 2026-11-16 también `AdminVisitasScreen` (link "Ver visitas" en
 fecha, con filtro por vendedor y búsqueda por tienda →
 `AdminVisitaDetalleScreen` (fotos antes/después, observaciones, tipo de
 visita, productos del pedido, checklist, ubicación del vendedor).
+**Tiendas de prueba** (2026-11-19): `copec-prueba`, `shell-prueba`,
+`aramco-prueba`, asignadas a Joaquín para probar el flujo por cadena. Sus
+visitas **no aparecen en `AdminVisitasScreen`** (se filtran por el sufijo
+`-prueba` del `tiendaId`), pero sí en el detalle de cada tienda de prueba.
 `AdminTiendaDetalleScreen` muestra además el historial de visitas y los
 jefes de esa tienda. Desde 2026-11-18 también `AdminJefesScreen` (link
 "Jefes de tienda"): todos los jefes, con búsqueda por nombre/tienda/
