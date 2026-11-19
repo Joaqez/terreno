@@ -74,9 +74,22 @@ const productosCol = collection(db, 'productos');
 const jefesTiendaCol = collection(db, 'jefesTienda');
 const preguntasCol = collection(db, 'preguntasMantencion');
 
+/** Fecha de hoy (YYYY-MM-DD) en hora de Chile. Antes se usaba
+ * `toISOString()`, que es UTC: el día cambiaba a las 21:00 (20:00 en
+ * invierno) y una jornada abierta de noche quedaba con la fecha de mañana. */
+export function fechaHoyChile(): string {
+  try {
+    // en-CA formatea como YYYY-MM-DD.
+    return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Santiago' }).format(new Date());
+  } catch {
+    // Sin soporte de zonas horarias: la hora local del teléfono (en Chile, la misma).
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  }
+}
+
 export function idJornadaDeHoy(vendedorId: string) {
-  const hoy = new Date().toISOString().slice(0, 10);
-  return `${vendedorId}_${hoy}`;
+  return `${vendedorId}_${fechaHoyChile()}`;
 }
 
 /** Referencia a la suscripción en vivo de `tiendas`, para poder cortarla al
@@ -301,7 +314,7 @@ export const useTerrenoStore = create<TerrenoState>((set, get) => ({
     const jornada: JornadaVendedor = {
       id: idJornadaDeHoy(vendedorId),
       vendedorId,
-      fecha: new Date().toISOString().slice(0, 10),
+      fecha: fechaHoyChile(),
       horaInicio: new Date().toISOString(),
       tiendaIds: get()
         .tiendas.filter((t) => t.esMinima && t.vendedorAsignadoId === vendedorId)
