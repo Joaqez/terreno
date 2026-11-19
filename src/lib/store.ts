@@ -15,6 +15,7 @@ import {
 import { db } from './firebase';
 import { escribirConCola, guardarCache, leerCache, reintentarPendientes } from './offline';
 import {
+  FueraDeRango,
   InventarioTienda,
   ItemChecklist,
   ItemPedido,
@@ -63,6 +64,8 @@ export interface BorradorVisita {
   checklist?: ItemChecklist[];
   inventario?: InventarioTienda;
   ubicacionVendedor?: UbicacionVisita;
+  /** Lo fija RutaScreen al verificar la distancia antes de empezar. */
+  fueraDeRango?: FueraDeRango;
   horaInicio: string;
 }
 
@@ -483,6 +486,7 @@ export const useTerrenoStore = create<TerrenoState>((set, get) => ({
       checklist: b.checklist,
       inventario: b.inventario,
       ubicacionVendedor: b.ubicacionVendedor,
+      fueraDeRango: b.fueraDeRango,
       observaciones,
       horaInicio: b.horaInicio,
       horaFin: new Date().toISOString(),

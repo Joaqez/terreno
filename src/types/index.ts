@@ -117,6 +117,17 @@ export interface UbicacionVisita {
   distanciaTiendaM: number | null;
 }
 
+/** Visita iniciada con "Iniciar igual" sin estar dentro del rango de la tienda
+ * (regla del equipo 2026-11-19, ver "Bloqueo de visitas fuera de rango" en CLAUDE.md). */
+export interface FueraDeRango {
+  /** lejos = a más de 200 m (descontando el error del GPS); imprecisa = el GPS
+   * reportó un error mayor a 100 m; sin_ubicacion = sin permiso, sin GPS o no respondió. */
+  motivo: 'lejos' | 'imprecisa' | 'sin_ubicacion';
+  distanciaM: number | null;
+  precisionM: number | null;
+  justificacion: string;
+}
+
 export interface Tienda {
   id: string;
   nombre: string;
@@ -141,6 +152,9 @@ export interface Tienda {
   /** coordenadas para "cómo llegar" (Waze / Google Maps) */
   lat?: number;
   lng?: number;
+  /** true = las coordenadas son aproximadas (centro de comuna, dirección por km): no se
+   * bloquean visitas por distancia hasta que un supervisor fije la ubicación desde una visita. */
+  ubicacionPorConfirmar?: boolean;
   /** Se actualiza al finalizar cada visita presencial (ver InventarioScreen). */
   ultimoInventario?: UltimoInventario;
 }
@@ -164,6 +178,8 @@ export interface Visita {
   /** Productos en exhibidor y bodega al llegar (visitas presenciales desde 2026-11-18). */
   inventario?: InventarioTienda;
   ubicacionVendedor?: UbicacionVisita;
+  /** Solo si se inició con "Iniciar igual" fuera del rango de la tienda. */
+  fueraDeRango?: FueraDeRango;
   fotoAntesUrl?: string;
   fotoDespuesUrl?: string;
   observaciones?: string;

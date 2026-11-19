@@ -4,15 +4,16 @@ import { FlatList, Linking, Modal, Pressable, StyleSheet, Text, View } from 'rea
 import { Badge, Card, Field, PrimaryButton, Screen, Subtitle, TextLink, Title } from '../components/ui';
 import { colors, radius, spacing } from '../theme';
 import { calcularDistanciaKm } from '../lib/distancia';
+import { RADIO_VISITA_M, ResultadoRango, formatearMetros, tiendaSeVerifica, verificarRango } from '../lib/rangoVisita';
 import { useTerrenoStore } from '../lib/store';
 import { useUbicacionActual } from '../lib/useUbicacionActual';
 import { RootStackParamList } from '../navigation/types';
-import { Tienda } from '../types';
+import { FueraDeRango, Tienda, UbicacionVisita } from '../types';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Ruta'>;
 
 export default function RutaScreen({ navigation }: Props) {
-  const { tiendas, visitas, jornada, marcarGestionRapida } = useTerrenoStore();
+  const { tiendas, visitas, jornada, marcarGestionRapida, iniciarBorrador, actualizarBorrador } = useTerrenoStore();
   const { ubicacion: miUbicacion, actualizando, sinPermiso, actualizar } = useUbicacionActual();
   // Re-render cada 30 s para que "hace X min" no quede congelado.
   const [ahora, setAhora] = useState(Date.now());
@@ -24,6 +25,46 @@ export default function RutaScreen({ navigation }: Props) {
   const [errorComoLlegar, setErrorComoLlegar] = useState<string | null>(null);
   const [tiendaRapida, setTiendaRapida] = useState<Tienda | null>(null);
   const [motivoRapida, setMotivoRapida] = useState('');
+  const [verificandoId, setVerificandoId] = useState<string | null>(null);
+  const [fuera, setFuera] = useState<{ tienda: Tienda; resultado: Extract<ResultadoRango, { ok: false }> } | null>(null);
+  const [justificacion, setJustificacion] = useState('');
+
+  // Bloqueo de visitas fuera de rango (2026-11-19, ver CLAUDE.md): antes de
+  // empezar se pide una ubicación precisa; si está a más de 200 m (menos el
+  // error del GPS), si el GPS es muy impreciso o si no hay ubicación, hay que
+  // justificar para "Iniciar igual" y la visita queda marcada en el panel.
+  async function iniciarVisita(t: Tienda) {
+    if (verificandoId) return;
+    if (!tiendaSeVerifica(t)) return empezarVisita(t, undefined, undefined);
+    setVerificandoId(t.id);
+    const resultado = await verificarRango(t);
+    setVerificandoId(null);
+    if (resultado.ok) return empezarVisita(t, resultado.ubicacion ?? undefined, undefined);
+    setJustificacion('');
+    setFuera({ tienda: t, resultado });
+  }
+
+  function empezarVisita(t: Tienda, ubicacion: UbicacionVisita | undefined, fueraDeRango: FueraDeRango | undefined) {
+    // Si vuelve a una visita a medias de la misma tienda, se retoma el borrador.
+    if (useTerrenoStore.getState().borrador?.tiendaId !== t.id) iniciarBorrador(t.id);
+    // Sin ubicación verificada, FotoAntesScreen toma una en segundo plano.
+    actualizarBorrador({ fueraDeRango, ubicacionVendedor: ubicacion });
+    navigation.navigate('FotoAntes', { tiendaId: t.id });
+  }
+
+  function iniciarIgual() {
+    if (!fuera || !justificacion.trim()) return;
+    const { tienda, resultado } = fuera;
+    setFuera(null);
+    empezarVisita(tienda, resultado.ubicacion ?? undefined, { ...resultado.fuera, justificacion: justificacion.trim() });
+  }
+
+  function reintentar() {
+    if (!fuera) return;
+    const t = fuera.tienda;
+    setFuera(null);
+    iniciarVisita(t);
+  }
 
   const visitadasIds = useMemo(() => new Set(visitas.map((v) => v.tiendaId)), [visitas]);
 
@@ -133,10 +174,13 @@ export default function RutaScreen({ navigation }: Props) {
                 <Text style={styles.btnGhostSmText}>Cómo llegar</Text>
               </Pressable>
               <Pressable
-                style={styles.btnPrimarySm}
-                onPress={() => navigation.navigate('FotoAntes', { tiendaId: t.id })}
+                style={[styles.btnPrimarySm, verificandoId && verificandoId !== t.id ? { opacity: 0.5 } : null]}
+                onPress={() => iniciarVisita(t)}
+                disabled={!!verificandoId}
               >
-                <Text style={styles.btnPrimarySmText}>Iniciar visita</Text>
+                <Text style={styles.btnPrimarySmText}>
+                  {verificandoId === t.id ? 'Verificando ubicación…' : 'Iniciar visita'}
+                </Text>
               </Pressable>
             </View>
             <TextLink title="Marcar como gestionada sin visita presencial" onPress={() => setTiendaRapida(t)} />
@@ -208,6 +252,47 @@ export default function RutaScreen({ navigation }: Props) {
               style={{ marginTop: spacing.sm, alignItems: 'center' }}
             >
               <Text style={{ color: colors.inkSoft, fontWeight: '600' }}>Cerrar</Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Modal: fuera de rango */}
+      <Modal visible={!!fuera} transparent animationType="slide" onRequestClose={() => setFuera(null)}>
+        <View style={styles.sheetOverlay}>
+          <View style={styles.sheet}>
+            <Text style={styles.sheetTitle}>
+              {fuera?.resultado.fuera.motivo === 'lejos'
+                ? `Estás a ${formatearMetros(fuera.resultado.fuera.distanciaM ?? 0)} de ${fuera.tienda.nombre}`
+                : 'No se pudo verificar tu ubicación'}
+            </Text>
+            <Text style={styles.fueraTexto}>
+              {fuera?.resultado.fuera.motivo === 'lejos'
+                ? `Para iniciar la visita tienes que estar a menos de ${RADIO_VISITA_M} m de la tienda (GPS ±${
+                    fuera.resultado.fuera.precisionM ?? '?'
+                  } m).`
+                : fuera?.resultado.fuera.motivo === 'imprecisa'
+                  ? `El GPS está dando una ubicación poco precisa (±${
+                      fuera.resultado.fuera.precisionM ?? '?'
+                    } m). Sal a un lugar abierto y reintenta.`
+                  : 'Revisa que el GPS esté activo y que el navegador tenga permiso de ubicación, y reintenta.'}
+            </Text>
+            <Pressable style={styles.sheetOption} onPress={reintentar}>
+              <Text style={[styles.sheetOptionText, { color: colors.accent }]}>Reintentar</Text>
+            </Pressable>
+            <View style={{ marginTop: spacing.md }}>
+              <Field
+                label="Si igual necesitas iniciarla, explica por qué"
+                placeholder="Ej: La tienda se cambió de local, está en la vereda del frente."
+                value={justificacion}
+                onChangeText={setJustificacion}
+                multiline
+              />
+            </View>
+            <PrimaryButton title="Iniciar igual" disabled={!justificacion.trim()} onPress={iniciarIgual} />
+            <Text style={styles.fueraAviso}>La visita quedará marcada como fuera de rango en el panel.</Text>
+            <Pressable onPress={() => setFuera(null)} style={{ marginTop: spacing.sm, alignItems: 'center' }}>
+              <Text style={{ color: colors.inkSoft, fontWeight: '600' }}>Cancelar</Text>
             </Pressable>
           </View>
         </View>
@@ -286,6 +371,8 @@ const styles = StyleSheet.create({
   sheet: { backgroundColor: colors.bgElevated, borderTopLeftRadius: radius.lg, borderTopRightRadius: radius.lg, padding: spacing.xl },
   sheetTitle: { fontWeight: '700', fontSize: 15.5, marginBottom: spacing.md, color: colors.ink },
   errorText: { color: colors.danger, fontSize: 13, marginBottom: spacing.md },
+  fueraTexto: { fontSize: 13.5, color: colors.inkSoft, lineHeight: 19, marginTop: -spacing.sm },
+  fueraAviso: { fontSize: 11.5, color: colors.inkFaint, textAlign: 'center', marginTop: spacing.sm },
   sheetOption: { paddingVertical: spacing.md, borderBottomWidth: 1, borderBottomColor: colors.border },
   sheetOptionText: { fontWeight: '600', fontSize: 14, color: colors.ink },
 });

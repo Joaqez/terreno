@@ -22,7 +22,9 @@ export default function FotoAntesScreen({ navigation, route }: Props) {
     if (borrador?.tiendaId !== tiendaId) {
       iniciarBorrador(tiendaId);
     }
-    // Ubicación del vendedor al empezar la visita, en segundo plano (no
+    // Si RutaScreen ya verificó la distancia, esa lectura es la de la visita.
+    if (useTerrenoStore.getState().borrador?.ubicacionVendedor) return;
+    // Si no (tienda sin coordenadas confiables), se toma en segundo plano (no
     // bloquea: si el GPS tarda o falla, la visita sigue igual). Queda en la
     // visita como respaldo y para corregir tiendas con coordenadas malas.
     obtenerUbicacionPrecisa().then((u) => {

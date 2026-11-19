@@ -63,7 +63,10 @@ export default function VisitaFila({
           </Text>
         ) : null}
       </View>
-      <Badge tone={etiqueta.tono}>{etiqueta.texto}</Badge>
+      <View style={styles.badges}>
+        <Badge tone={etiqueta.tono}>{etiqueta.texto}</Badge>
+        {visita.fueraDeRango ? <Badge tone="danger">Fuera de rango</Badge> : null}
+      </View>
     </Pressable>
   );
 }
@@ -77,6 +80,7 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.border,
     gap: spacing.md,
   },
+  badges: { alignItems: 'flex-end', gap: 4 },
   miniatura: { width: 52, height: 52, borderRadius: radius.sm, backgroundColor: colors.border },
   sinFoto: { alignItems: 'center', justifyContent: 'center' },
   sinFotoTexto: { fontSize: 10, color: colors.inkFaint },

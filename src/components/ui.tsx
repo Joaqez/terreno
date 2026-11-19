@@ -95,7 +95,7 @@ export function TextLink({ title, onPress, tone = 'accent' }: { title: string; o
   );
 }
 
-export function Badge({ children, tone = 'neutral' }: { children: React.ReactNode; tone?: 'pending' | 'done' | 'accent' | 'neutral' }) {
+export function Badge({ children, tone = 'neutral' }: { children: React.ReactNode; tone?: 'pending' | 'done' | 'accent' | 'neutral' | 'danger' }) {
   return (
     <View style={[styles.badge, badgeTones[tone]]}>
       <Text style={[styles.badgeText, badgeTextTones[tone]]}>{children}</Text>
@@ -108,12 +108,14 @@ const badgeTones = StyleSheet.create({
   done: { backgroundColor: colors.successSoft },
   accent: { backgroundColor: colors.accentSoft },
   neutral: { backgroundColor: colors.border },
+  danger: { backgroundColor: colors.dangerSoft },
 });
 const badgeTextTones = StyleSheet.create({
   pending: { color: colors.amber },
   done: { color: colors.success },
   accent: { color: colors.accent },
   neutral: { color: colors.inkSoft },
+  danger: { color: colors.danger },
 });
 
 const typographySize = { xs: 12, sm: 13, md: 14.5, lg: 19, xl: 22 };

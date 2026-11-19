@@ -71,6 +71,13 @@ antiguas en Firestore todavía pueden tener `kmInicio`/`kmFinal`, pero la app
 ya no los lee ni escribe. Esto arranca la
 `JornadaVendedor` del día.
 
+**Cuándo cambia el día:** la jornada es por fecha (id `<uid>_<YYYY-MM-DD>`)
+y lo "visitada" se muestra solo para las visitas de la jornada de hoy, así
+que la ruta se libera sola al día siguiente (al abrir o recargar la app).
+Desde 2026-11-19 la fecha es la de **Chile** (`fechaHoyChile()` en
+`store.ts`, zona `America/Santiago`); antes era UTC y el día cambiaba a las
+21:00. No volver a usar `toISOString().slice(0, 10)` para fechas de jornada.
+
 ### Ruta del día
 La empresa define un mínimo de tiendas que el vendedor debe visitar ese día
 (`Tienda.esMinima = true`). La app muestra esas tiendas con un **orden
@@ -112,19 +119,36 @@ toma, en segundo plano y sin bloquear, una lectura precisa que queda en
 panel la muestra con link a Google Maps. Sirve de respaldo y para corregir
 coordenadas de tiendas mal ubicadas.
 
-**Pendiente — bloquear visitas fuera de rango (decidido 2026-11-18, NO
-implementado todavía):** no permitir iniciar una visita a más de **200 m**
-de la tienda (descontando el margen de error del GPS), con una opción
-"Iniciar igual" que exige una justificación y deja la visita marcada en el
-panel. **Antes de activarlo hay que corregir las coordenadas** de las
-tiendas con dirección por kilometraje o aproximada: el geocodificador las
-dejó en el centro de la comuna o en otro lugar (ej. Pronto Costanera E0,
-`copec-64079`, "Costanera Norte km 2": quedó cerca de Independencia y está
-en Lo Barnechea — el km se cuenta desde el oriente; **ya corregida
-2026-11-18** a -33.3751547, -70.5323189, comuna Lo Barnechea). Hay ~12 tiendas
-asignadas con coordenadas compartidas/aproximadas (Cantagallo, Salida Norte,
-Piedra Roja, Caren, las Costanera, etc.); revisar todas las de Santiago con
-dirección "km"/"s/n" una por una.
+**Bloqueo de visitas fuera de rango (implementado 2026-11-19):** al tocar
+"Iniciar visita" en `RutaScreen` se pide una ubicación precisa
+(`verificarRango()` en `src/lib/rangoVisita.ts`, timeout 15 s). Se bloquea si:
+(a) la distancia a la tienda **menos** el error del GPS supera **200 m**
+(`RADIO_VISITA_M`); (b) el GPS reporta un error mayor a **100 m**
+(`PRECISION_MAXIMA_M` — si no, descontar el error dejaría pasar casi todo);
+(c) no hay ubicación (permiso negado, sin GPS, timeout — si no, negar el
+permiso bastaría para saltarse el bloqueo). En los tres casos aparece
+"Reintentar" o "Iniciar igual" con justificación **obligatoria**; la visita
+guarda `Visita.fueraDeRango` (`{motivo: 'lejos'|'imprecisa'|'sin_ubicacion',
+distanciaM, precisionM, justificacion}`) y el panel la marca "Fuera de rango"
+(listado y detalle). La lectura verificada es la `ubicacionVendedor` de la
+visita (`FotoAntesScreen` ya no toma otra). **No aplica** a gestión rápida,
+región, tiendas creadas con "Nueva visita", tiendas sin coordenadas ni
+tiendas con `Tienda.ubicacionPorConfirmar: true`.
+
+**Coordenadas por confirmar:** el geocodificador dejó varias tiendas en el
+centro de la comuna o en otro lugar (ej. Pronto Costanera E0, `copec-64079`,
+"Costanera Norte km 2", quedó cerca de Independencia y está en Lo Barnechea;
+corregida 2026-11-18 a -33.3751547, -70.5323189 y confirmada por una visita
+real a 26 m). El 2026-11-19 se marcaron con `ubicacionPorConfirmar: true` las
+18 de Santiago con coordenadas compartidas o dirección por km (Cantagallo,
+U. de los Andes, Gertrudis, Patagonia, Manquehue, Salida Norte, Piedra Roja,
+Lampa, Enea, Caren, Bilbao/Varas, Tobalaba Bilbao, Costanera E1/E2, Ruta 68,
+Fach Oriente, Lo Blanco, Puente Maipo Poniente). Se corrigen desde el panel:
+`AdminVisitaDetalleScreen` → "Usar esta ubicación como la de la tienda"
+(fija `lat`/`lng` con la ubicación del vendedor en esa visita y quita la
+marca, con lo que se activa el bloqueo). `AdminTiendaDetalleScreen` muestra
+el estado de la ubicación. Las otras ~112 tienen dirección con número y se
+asumen bien; si una resulta mal, se corrige con el mismo botón.
 
 **Asignación por vendedor — ya filtra (actualizado 2026-11-15):** el negocio
 es principalmente vendedores que cubren Santiago, con las tiendas repartidas
@@ -351,7 +375,10 @@ kilometraje desde 2026-11-16) y la app muestra un resumen:
 tiendas visitadas vs. mínimo, visitas con pedido, visitas sin pedido,
 gestiones rápidas, y la lista completa de visitas del día con hora.
 
-## Integración con Bsale — próxima fase, no en el alcance actual
+## Integración con Bsale — fuera de los pendientes
+
+**2026-11-19: el usuario la sacó de la lista de pendientes.** No proponerla
+como siguiente paso a menos que se vuelva a pedir. Contexto por si vuelve:
 
 La empresa usa Bsale (sistema de ventas e inventario, con API propia) y
 quiere que los vendedores puedan ver sus ventas y reportes dentro de esta
@@ -525,7 +552,9 @@ app. **No está implementado ni diseñado todavía.** Antes de construirlo:
    activado 2026-11-15**: ver la nota actualizada de "Asignación por
    vendedor" en "Ruta del día" arriba — 102 de 131 tiendas de Santiago ya
    tienen vendedor asignado, el resto se va completando desde el panel.
-7. Integración con Bsale (ver sección arriba).
+7. ~~Integración con Bsale~~ — sacada de los pendientes 2026-11-19 (ver
+   sección arriba). Igual que la carga de preguntas del checklist: tampoco
+   es un pendiente del lado del desarrollo.
 8. ✅ (parcial) Distancia real en "Ruta del día" — la versión gratis (GPS del
    vendedor + distancia en línea recta, sin costo) está hecha, ver la nota
    en "Ruta del día" arriba. Lo que sigue pendiente y sí tiene costo es el

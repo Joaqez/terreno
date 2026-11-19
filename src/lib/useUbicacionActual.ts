@@ -21,16 +21,20 @@ function aUbicacion(p: Location.LocationObject): Ubicacion {
  * causa del bug del 2026-11-16 (distancias calculadas como si el vendedor
  * siguiera en Chamisero). Por eso se fuerza `maximumAge: 0`.
  */
-export async function obtenerUbicacionPrecisa(): Promise<Ubicacion | null> {
+export async function obtenerUbicacionPrecisa(timeoutMs = 20000): Promise<Ubicacion | null> {
   try {
     const { status } = await Location.requestForegroundPermissionsAsync();
     if (status !== 'granted') return null;
-    const p = await Location.getCurrentPositionAsync({
-      accuracy: Location.Accuracy.High,
-      maximumAge: 0,
-      timeout: 20000,
-    } as Location.LocationOptions);
-    return aUbicacion(p);
+    // `timeout` solo lo respeta la versión web; el Promise.race corta también en nativo.
+    const p = await Promise.race([
+      Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.High,
+        maximumAge: 0,
+        timeout: timeoutMs,
+      } as Location.LocationOptions),
+      new Promise<null>((resolve) => setTimeout(() => resolve(null), timeoutMs + 1000)),
+    ]);
+    return p ? aUbicacion(p) : null;
   } catch (err) {
     console.error('No se pudo obtener la ubicación precisa', err);
     return null;

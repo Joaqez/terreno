@@ -1,20 +1,23 @@
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Image, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import InventarioResumen from '../components/InventarioResumen';
 import { Badge, Screen, Subtitle, TextLink, Title } from '../components/ui';
 import { etiquetaVisita, formatearFecha, formatearHora } from '../components/VisitaFila';
 import { colors, radius, spacing } from '../theme';
+import { PRECISION_MAXIMA_M, formatearMetros, textoFueraDeRango } from '../lib/rangoVisita';
 import { useTerrenoStore } from '../lib/store';
 import { RootStackParamList } from '../navigation/types';
-import { RespuestaChecklist } from '../types';
+import { RespuestaChecklist, Tienda, UbicacionVisita } from '../types';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'AdminVisitaDetalle'>;
 
 export default function AdminVisitaDetalleScreen({ navigation, route }: Props) {
   const { visitaId } = route.params;
-  const { tiendas, visitasAdmin, vendedoresDisponibles, cargarVendedores, jefesTienda } = useTerrenoStore();
+  const { tiendas, visitasAdmin, vendedoresDisponibles, cargarVendedores, jefesTienda, actualizarTienda } =
+    useTerrenoStore();
   const visita = visitasAdmin.find((v) => v.id === visitaId);
+  const [confirmandoUbicacion, setConfirmandoUbicacion] = useState(false);
   const jefe = visita?.jefeTiendaId ? jefesTienda.find((j) => j.id === visita.jefeTiendaId) : undefined;
 
   useEffect(() => {
@@ -44,9 +47,17 @@ export default function AdminVisitaDetalleScreen({ navigation, route }: Props) {
         <Title>{tienda?.nombre ?? 'Tienda eliminada'}</Title>
         <Subtitle>{tienda ? `${tienda.direccion}, ${tienda.comuna}` : visita.tiendaId}</Subtitle>
 
-        <View style={{ marginBottom: spacing.md }}>
+        <View style={{ marginBottom: spacing.md, flexDirection: 'row', gap: 6 }}>
           <Badge tone={etiqueta.tono}>{etiqueta.texto}</Badge>
+          {visita.fueraDeRango ? <Badge tone="danger">Fuera de rango</Badge> : null}
         </View>
+
+        {visita.fueraDeRango ? (
+          <View style={[styles.card, styles.cardFuera]}>
+            <Text style={styles.fueraTitulo}>Iniciada fuera de rango · {textoFueraDeRango(visita.fueraDeRango)}</Text>
+            <Text style={styles.texto}>“{visita.fueraDeRango.justificacion}”</Text>
+          </View>
+        ) : null}
 
         <View style={styles.card}>
           <Linea etiqueta="Vendedor" valor={vendedor?.nombre ?? '—'} />
@@ -120,6 +131,11 @@ export default function AdminVisitaDetalleScreen({ navigation, route }: Props) {
                   ? ` (precisión ±${Math.round(visita.ubicacionVendedor.precisionM)} m)`
                   : ''}
               </Text>
+              {tienda?.ubicacionPorConfirmar ? (
+                <Text style={styles.porConfirmar}>
+                  La ubicación de esta tienda está por confirmar: todavía no se bloquean visitas lejos de ella.
+                </Text>
+              ) : null}
               <View style={{ marginTop: spacing.sm }}>
                 <TextLink
                   title="Ver en Google Maps →"
@@ -130,6 +146,39 @@ export default function AdminVisitaDetalleScreen({ navigation, route }: Props) {
                   }
                 />
               </View>
+              {tienda && visita.modo === 'presencial' ? (
+                <View style={styles.fijarUbicacion}>
+                  {ubicacionYaUsada(tienda, visita.ubicacionVendedor) ? (
+                    <Text style={styles.ubicacionFijada}>✓ Esta es la ubicación actual de la tienda.</Text>
+                  ) : confirmandoUbicacion ? (
+                    <>
+                      <Text style={styles.texto}>
+                        ¿Fijar este punto como la ubicación de {tienda.nombre}? Desde ahí se medirán los {'200 m'} de
+                        las próximas visitas.
+                        {(visita.ubicacionVendedor.precisionM ?? Infinity) > PRECISION_MAXIMA_M
+                          ? ' Ojo: el GPS de esta visita era poco preciso.'
+                          : ''}
+                      </Text>
+                      <View style={styles.filaBotones}>
+                        <TextLink
+                          title="Sí, fijar ubicación"
+                          onPress={() => {
+                            actualizarTienda(tienda.id, {
+                              lat: visita.ubicacionVendedor!.lat,
+                              lng: visita.ubicacionVendedor!.lng,
+                              ubicacionPorConfirmar: false,
+                            });
+                            setConfirmandoUbicacion(false);
+                          }}
+                        />
+                        <TextLink title="Cancelar" tone="danger" onPress={() => setConfirmandoUbicacion(false)} />
+                      </View>
+                    </>
+                  ) : (
+                    <TextLink title="Usar esta ubicación como la de la tienda" onPress={() => setConfirmandoUbicacion(true)} />
+                  )}
+                </View>
+              ) : null}
             </View>
           </>
         ) : null}
@@ -163,8 +212,8 @@ export default function AdminVisitaDetalleScreen({ navigation, route }: Props) {
 
 const TEXTO_RESPUESTA: Record<RespuestaChecklist, string> = { si: 'Sí', no: 'No', na: 'No aplica' };
 
-function formatearMetros(m: number) {
-  return m >= 1000 ? `${(m / 1000).toFixed(1)} km` : `${m} m`;
+function ubicacionYaUsada(t: Tienda, u: UbicacionVisita) {
+  return !t.ubicacionPorConfirmar && t.lat === u.lat && t.lng === u.lng;
 }
 
 function Linea({ etiqueta, valor }: { etiqueta: string; valor: string }) {
@@ -201,6 +250,12 @@ const estiloRespuesta = StyleSheet.create({
 });
 
 const styles = StyleSheet.create({
+  cardFuera: { borderColor: colors.danger, backgroundColor: colors.dangerSoft, marginBottom: spacing.sm },
+  fueraTitulo: { fontSize: 13, fontWeight: '700', color: colors.danger, marginBottom: 4 },
+  porConfirmar: { fontSize: 12.5, color: colors.amber, fontWeight: '600', marginTop: spacing.sm },
+  fijarUbicacion: { marginTop: spacing.md, paddingTop: spacing.md, borderTopWidth: 1, borderTopColor: colors.border, gap: spacing.sm },
+  ubicacionFijada: { fontSize: 13, color: colors.success, fontWeight: '600' },
+  filaBotones: { flexDirection: 'row', gap: spacing.xl },
   comentarioNo: { fontSize: 12.5, color: colors.danger, marginTop: -2, marginBottom: 6, fontStyle: 'italic' },
   respuesta: { fontSize: 13, fontWeight: '700', paddingHorizontal: 8, paddingVertical: 3, borderRadius: radius.sm, overflow: 'hidden' },
   card: { backgroundColor: colors.bgElevated, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, padding: spacing.lg },

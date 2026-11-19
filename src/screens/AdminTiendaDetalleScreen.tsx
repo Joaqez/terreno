@@ -1,6 +1,6 @@
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import React, { useEffect } from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Linking, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Screen, Subtitle, TextLink, Title } from '../components/ui';
 import InventarioResumen from '../components/InventarioResumen';
 import JefeTiendaModal from '../components/JefeTiendaModal';
@@ -99,6 +99,25 @@ export default function AdminTiendaDetalleScreen({ navigation, route }: Props) {
         <Pressable style={styles.selector} onPress={() => setMostrarSelector(true)}>
           <Text style={styles.selectorTexto}>{asignado ? asignado.nombre : 'Sin asignar — tocar para elegir'}</Text>
         </Pressable>
+
+        {tienda.esMinima ? (
+          <>
+            <Text style={styles.etiqueta}>Ubicación</Text>
+            <Text style={[styles.ubicacionEstado, tienda.ubicacionPorConfirmar || tienda.lat == null ? styles.ubicacionPendiente : null]}>
+              {tienda.lat == null
+                ? 'Sin coordenadas: no se verifica la distancia al iniciar visitas.'
+                : tienda.ubicacionPorConfirmar
+                  ? 'Por confirmar: no se bloquean visitas lejos de la tienda. Para corregirla, abre una visita y toca "Usar esta ubicación como la de la tienda".'
+                  : 'Confirmada: no se puede iniciar una visita a más de 200 m sin justificar.'}
+            </Text>
+            {tienda.lat != null ? (
+              <TextLink
+                title="Ver en Google Maps →"
+                onPress={() => Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${tienda.lat},${tienda.lng}`)}
+              />
+            ) : null}
+          </>
+        ) : null}
 
         <Text style={styles.etiqueta}>Jefes de tienda ({jefesActivos.length})</Text>
         {jefesActivos.map((j) => (
@@ -242,6 +261,8 @@ function FilaJefe({
 }
 
 const styles = StyleSheet.create({
+  ubicacionEstado: { fontSize: 13, color: colors.inkSoft, lineHeight: 19, marginBottom: spacing.sm },
+  ubicacionPendiente: { color: colors.amber, fontWeight: '600' },
   etiqueta: {
     fontSize: 12,
     fontWeight: '700',
