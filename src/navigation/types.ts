@@ -6,6 +6,7 @@ export type RootStackParamList = {
   TipoVisita: { tiendaId: string };
   Pedido: { tiendaId: string };
   FotoAntes: { tiendaId: string };
+  Inventario: { tiendaId: string };
   JefeTienda: { tiendaId: string };
   Checklist: { tiendaId: string; tipo: 'venta' | 'mantencion' };
   FotoDespues: { tiendaId: string; tipo: 'venta' | 'mantencion' };

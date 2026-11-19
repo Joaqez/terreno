@@ -1,6 +1,7 @@
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import React, { useEffect } from 'react';
 import { Image, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import InventarioResumen from '../components/InventarioResumen';
 import { Badge, Screen, Subtitle, TextLink, Title } from '../components/ui';
 import { etiquetaVisita, formatearFecha, formatearHora } from '../components/VisitaFila';
 import { colors, radius, spacing } from '../theme';
@@ -78,6 +79,13 @@ export default function AdminVisitaDetalleScreen({ navigation, route }: Props) {
                 <Text style={styles.texto}>Sin productos registrados.</Text>
               )}
             </View>
+          </>
+        ) : null}
+
+        {visita.inventario ? (
+          <>
+            <Text style={styles.etiqueta}>Productos en tienda al llegar</Text>
+            <InventarioResumen inventario={visita.inventario} />
           </>
         ) : null}
 

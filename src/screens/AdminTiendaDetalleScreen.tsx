@@ -2,6 +2,7 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import React, { useEffect } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Screen, Subtitle, TextLink, Title } from '../components/ui';
+import InventarioResumen from '../components/InventarioResumen';
 import JefeTiendaModal from '../components/JefeTiendaModal';
 import VisitaFila, { formatearFecha, formatearHora } from '../components/VisitaFila';
 import { JefeTienda } from '../types';
@@ -127,6 +128,22 @@ export default function AdminTiendaDetalleScreen({ navigation, route }: Props) {
             ))}
           </>
         ) : null}
+
+        <Text style={styles.etiqueta}>Último inventario conocido</Text>
+        {tienda.ultimoInventario ? (
+          <Pressable
+            onPress={() => navigation.navigate('AdminVisitaDetalle', { visitaId: tienda.ultimoInventario!.visitaId })}
+          >
+            <InventarioResumen
+              inventario={tienda.ultimoInventario}
+              pie={`Visita del ${formatearFecha(tienda.ultimoInventario.fecha)} a las ${formatearHora(
+                tienda.ultimoInventario.fecha
+              )} por ${nombreVendedor(tienda.ultimoInventario.vendedorId)} · tocar para ver la visita`}
+            />
+          </Pressable>
+        ) : (
+          <Text style={styles.infoValor}>Todavía no se registra qué productos hay en esta tienda.</Text>
+        )}
 
         {tienda.notas ? (
           <>

@@ -15,6 +15,7 @@ import {
 import { db } from './firebase';
 import { escribirConCola, guardarCache, leerCache, reintentarPendientes } from './offline';
 import {
+  InventarioTienda,
   ItemChecklist,
   ItemPedido,
   JefeTienda,
@@ -46,17 +47,21 @@ const vendedorVacio: Vendedor = { id: '', nombre: '', email: '', rol: 'vendedor'
  */
 
 /** Borrador de la visita presencial en curso: se va llenando pantalla por
- * pantalla (foto antes → jefe de tienda → ¿pedido? → pedido → checklist → foto después
+ * pantalla (foto antes → jefe de tienda → productos en tienda → ¿pedido? → pedido → checklist → foto después
  * → observaciones) y se vuelca a una Visita real recién en "Finalizar visita". */
 export interface BorradorVisita {
   tiendaId: string;
   tipo?: 'venta' | 'mantencion';
   pedido?: ItemPedido[];
+  /** Cantidades que el vendedor cambió a mano en el pedido (productoId → cantidad).
+   * El resto se recalcula desde el inventario (ver PedidoScreen). No se guarda en la visita. */
+  pedidoManual?: Record<string, number>;
   fotoAntesUrl?: string;
   fotoDespuesUrl?: string;
   jefeTiendaId?: string;
   jefeTiendaNombre?: string;
   checklist?: ItemChecklist[];
+  inventario?: InventarioTienda;
   ubicacionVendedor?: UbicacionVisita;
   horaInicio: string;
 }
@@ -114,7 +119,7 @@ interface TerrenoState {
   iniciarJornada: () => void;
   finalizarJornada: () => void;
   agregarTiendaCreadaPorVendedor: (tienda: Omit<Tienda, 'id' | 'esMinima' | 'distanciaKm'>) => void;
-  registrarVisita: (visita: Omit<Visita, 'id' | 'vendedorId' | 'jornadaId'>) => void;
+  registrarVisita: (visita: Omit<Visita, 'id' | 'vendedorId' | 'jornadaId'>) => Visita;
   marcarGestionRapida: (tiendaId: string, motivo: string) => void;
 
   /** Jefes de tienda: los vendedores los crean, editan y dan de baja desde la visita. */
@@ -350,6 +355,7 @@ export const useTerrenoStore = create<TerrenoState>((set, get) => ({
       set({ jornada: { ...jornada, visitaIds } });
       escribirConCola('jornadas', jornada.id, 'update', { visitaIds });
     }
+    return nueva;
   },
 
   marcarGestionRapida: (tiendaId, motivo) => {
@@ -452,7 +458,7 @@ export const useTerrenoStore = create<TerrenoState>((set, get) => ({
   finalizarBorrador: (observaciones) => {
     const b = get().borrador;
     if (!b || !b.tipo) return;
-    get().registrarVisita({
+    const visita = get().registrarVisita({
       tiendaId: b.tiendaId,
       modo: 'presencial',
       tipo: b.tipo,
@@ -462,11 +468,19 @@ export const useTerrenoStore = create<TerrenoState>((set, get) => ({
       jefeTiendaId: b.jefeTiendaId,
       jefeTiendaNombre: b.jefeTiendaNombre,
       checklist: b.checklist,
+      inventario: b.inventario,
       ubicacionVendedor: b.ubicacionVendedor,
       observaciones,
       horaInicio: b.horaInicio,
       horaFin: new Date().toISOString(),
     });
+    // Copia en la tienda: precarga la próxima visita (sin red, porque las
+    // tiendas ya están en caché) y es el "último inventario" del panel.
+    if (b.inventario) {
+      get().actualizarTienda(b.tiendaId, {
+        ultimoInventario: { ...b.inventario, fecha: visita.horaFin, visitaId: visita.id, vendedorId: visita.vendedorId },
+      });
+    }
     set({ borrador: null });
   },
 

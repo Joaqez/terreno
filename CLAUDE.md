@@ -50,7 +50,8 @@ Estructura de pantallas y su equivalente en `src/screens/`:
 6. Cómo llegar (Waze / Google Maps) — modal dentro de `RutaScreen`
 7. Visita rápida / gestión sin visita presencial — modal dentro de `RutaScreen`
 8. Foto antes — `FotoAntesScreen`
-8b. ¿Con quién hablaste? (jefe de tienda) — `JefeTiendaScreen` (agregada 2026-11-16)
+8a. ¿Con quién hablaste? (jefe de tienda) — `JefeTiendaScreen` (agregada 2026-11-16)
+8b. Productos en tienda (exhibidor / bodega) — `InventarioScreen` (agregada 2026-11-18)
 9. ¿Hay pedido? (Con pedido / Sin pedido) — `TipoVisitaScreen` (antes "¿Necesita stock?", cambió 2026-11-18)
 10. Pedido (productos y cantidades) — `PedidoScreen` (reemplazó a "Detalle de venta" el 2026-11-16)
 10b. Checklist de mantención del exhibidor — `ChecklistScreen` (agregada 2026-11-18)
@@ -223,6 +224,33 @@ al revés — se decide el tipo después de la conversación con el encargado:
    Después, **siempre** aparece "¿Con quién hablaste?" (`JefeTiendaScreen`):
    elige un jefe de tienda ya registrado, crea uno nuevo, o toca "Omitir"
    (ver "Jefes de tienda" abajo).
+   Luego **"Productos en tienda"** (`InventarioScreen`, desde 2026-11-18;
+   va después del jefe y antes de "¿Hay pedido?" por pedido del equipo el
+   2026-11-19):
+   qué productos hay en el **exhibidor** y en la **bodega** — solo
+   presencia, **por sabor**, sin cantidades. Lista con los productos de la
+   cadena (misma regla que el pedido), agrupada por línea con "Toda en
+   exhibidor/bodega" (`agruparPorLinea()` en `src/lib/catalogo.ts`: el
+   catálogo no trae la línea, se deduce de marca + puffs + nombre). Reglas
+   del equipo: para seguir sin marcar nada hay que confirmar "El exhibidor
+   está vacío" / "La bodega está vacía" (para no confundirlo con saltarse el
+   paso); existe "No pude revisar la bodega" (`bodegaRevisada: false`,
+   distinto de vacía); **se precarga** con el último inventario de la
+   tienda (`Tienda.ultimoInventario`, que se reescribe al finalizar cada
+   visita presencial — vive en la tienda para que funcione sin señal y es
+   lo que el panel muestra como "Último inventario conocido"). Se guarda en
+   `Visita.inventario`. **Pedido sugerido** (2026-11-19): al abrir
+   `PedidoScreen` cada producto de la cadena viene precargado con una
+   cantidad según el stock marcado — en exhibidor y bodega → 0, en uno solo
+   → 5, en ninguno → 10 (`SUGERIDO_SEGUN_PRESENCIA`, fijo en código por
+   ahora); una bodega no revisada cuenta como **vacía**. Si la tienda no
+   tiene nada, se sugiere todo el catálogo de la cadena (decisión del
+   equipo: es solo sugerencia). Todo es editable; el borrador guarda solo
+   los cambios a mano (`pedidoManual`), así que si el vendedor vuelve y
+   corrige el stock, lo que no tocó se recalcula. Cada producto muestra por
+   qué se sugiere ("Falta en bodega", etc.) y hay filtro "Faltan". No aplica a
+   región ni gestión rápida. Pendiente para otra fase: vista "tiendas sin
+   X producto" en el panel.
 2. "¿Hay pedido?" (`TipoVisitaScreen`). **Desde 2026-11-18 la app ya no
    habla de "venta" ni "mantención"**: solo **Con pedido** / **Sin pedido**
    (feedback del primer uso real). Internamente `Visita.tipo` sigue siendo

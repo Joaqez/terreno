@@ -33,6 +33,33 @@ export interface ItemPedido {
   cantidad: number;
 }
 
+/** Producto presente en la tienda (sin cantidad). Copia nombre/sku por lo mismo que ItemPedido. */
+export interface ItemInventario {
+  productoId: string;
+  nombre: string;
+  sku: string;
+}
+
+/**
+ * Qué productos hay en la tienda al llegar (2026-11-18), justo después de la
+ * foto de antes. Solo presencia, sin cantidades. Ojo: va anidado en Firestore,
+ * así que ningún campo puede quedar `undefined`.
+ */
+export interface InventarioTienda {
+  exhibidor: ItemInventario[];
+  /** Vacío si `bodegaRevisada` es false. */
+  bodega: ItemInventario[];
+  /** false = "No pude revisar la bodega" (no es lo mismo que bodega vacía). */
+  bodegaRevisada: boolean;
+}
+
+/** Último inventario registrado en una tienda: precarga la visita siguiente y se ve en el panel. */
+export interface UltimoInventario extends InventarioTienda {
+  fecha: string; // ISO
+  visitaId: string;
+  vendedorId: string;
+}
+
 /**
  * Jefe/encargado de una tienda (colección `jefesTienda`). Vive aparte de la
  * visita porque cambian seguido y se reutilizan entre visitas: la visita solo
@@ -114,6 +141,8 @@ export interface Tienda {
   /** coordenadas para "cómo llegar" (Waze / Google Maps) */
   lat?: number;
   lng?: number;
+  /** Se actualiza al finalizar cada visita presencial (ver InventarioScreen). */
+  ultimoInventario?: UltimoInventario;
 }
 
 export interface Visita {
@@ -132,6 +161,8 @@ export interface Visita {
   pedido?: ItemPedido[];
   /** Checklist de mantención del exhibidor (todas las visitas presenciales desde 2026-11-18). */
   checklist?: ItemChecklist[];
+  /** Productos en exhibidor y bodega al llegar (visitas presenciales desde 2026-11-18). */
+  inventario?: InventarioTienda;
   ubicacionVendedor?: UbicacionVisita;
   fotoAntesUrl?: string;
   fotoDespuesUrl?: string;

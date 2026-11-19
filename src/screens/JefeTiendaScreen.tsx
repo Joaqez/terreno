@@ -24,7 +24,7 @@ export default function JefeTiendaScreen({ navigation, route }: Props) {
 
   function continuarCon(jefe: JefeTienda | null) {
     actualizarBorrador({ jefeTiendaId: jefe?.id, jefeTiendaNombre: jefe?.nombre });
-    navigation.navigate('TipoVisita', { tiendaId });
+    navigation.navigate('Inventario', { tiendaId });
   }
 
   return (

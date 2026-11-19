@@ -26,6 +26,14 @@ export default function VisitaRegistradaScreen({ navigation, route }: Props) {
 
       <Card>
         <Row k="Tienda" v={tienda?.nombre ?? '—'} />
+        {visita?.inventario ? (
+          <Row
+            k="En tienda"
+            v={`Exhibidor ${visita.inventario.exhibidor.length} · Bodega ${
+              visita.inventario.bodegaRevisada ? visita.inventario.bodega.length : 'no revisada'
+            }`}
+          />
+        ) : null}
         <Row k="Pedido" v={visita?.tipo === 'venta' ? 'Con pedido' : 'Sin pedido'} />
         {visita?.tipo === 'venta' && (
           <Row
