@@ -31,7 +31,14 @@ export function useFotoConSubida() {
       setFotoUrl(url);
     } catch (err) {
       console.error('No se pudo subir la foto', err);
-      setError('No se pudo subir la foto. Revisa tu conexión e intenta de nuevo tocando la foto otra vez.');
+      // El código (ej. storage/unauthorized, storage/retry-limit-exceeded) sirve
+      // para diagnosticar desde una captura de pantalla del vendedor.
+      const codigo = (err as { code?: string })?.code;
+      setError(
+        `No se pudo subir la foto. Revisa tu conexión e intenta de nuevo tocando la foto otra vez.${
+          codigo ? ` (código: ${codigo})` : ''
+        }`
+      );
     } finally {
       setSubiendo(false);
     }

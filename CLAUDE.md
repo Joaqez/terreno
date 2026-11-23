@@ -166,6 +166,13 @@ nuevo, "Santiago"/`shpereznova@gmail.com`; 87 a Benjamín); las 29 restantes
 se habían importado a Firestore— siguen sin `vendedorAsignadoId`, así que
 hoy no le aparecen a nadie en "Ruta del día" hasta que se asignen desde el
 panel de administración.
+**Reasignación 2026-11-23** (pedido del usuario): Santiago dejó todas sus
+Copec (14, quedaron **sin asignar** a propósito) y recibió 14 Aramco/Shell
+de Las Condes, Vitacura y Lo Barnechea que eran de Benjamín (Portal La
+Dehesa, Shell La Dehesa y La Dehesa I, Cantagallo Aramco, U. de los Andes,
+Blanche, Laura de Neves, La Capitanía, Boulevard Nueva Las Condes,
+Hualtatas, Vitacura/Luis Pasteur Aramco, Luis Pasteur Shell, San Félix,
+Vitacura 7900). Quedó: Benjamín 73, Santiago 14, José Tomás 1 (E0).
 
 Las tiendas **fuera de Santiago** ("de región") no se visitan nunca en
 persona — se hacen seguimiento por teléfono/WhatsApp/correo. Desde
