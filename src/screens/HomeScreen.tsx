@@ -46,6 +46,7 @@ export default function HomeScreen({ navigation }: Props) {
         )}
 
         <TextLink title="Cerrar sesión" tone="danger" onPress={() => signOut(auth)} />
+        <Text style={styles.version}>Versión {VERSION}</Text>
       </Screen>
     );
   }
@@ -95,11 +96,17 @@ export default function HomeScreen({ navigation }: Props) {
       <View style={{ marginTop: spacing.lg, alignItems: 'center' }}>
         <TextLink title="Cerrar sesión" tone="danger" onPress={() => signOut(auth)} />
       </View>
+      <Text style={styles.version}>Versión {VERSION}</Text>
     </Screen>
   );
 }
 
+/** Fecha y hora del build (scripts/buildWeb.js). Sirve para confirmar qué
+ * versión tiene abierta un vendedor; "desarrollo" = `expo start` local. */
+const VERSION = process.env.EXPO_PUBLIC_VERSION || 'desarrollo';
+
 const styles = StyleSheet.create({
+  version: { fontSize: 11, color: colors.inkFaint, textAlign: 'center', marginTop: spacing.lg },
   hero: {
     backgroundColor: colors.accent,
     borderRadius: radius.lg,

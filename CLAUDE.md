@@ -433,6 +433,17 @@ app. **No está implementado ni diseñado todavía.** Antes de construirlo:
 - **Firebase Hosting**: aloja el build web (`dist/`, generado con `npm run
   build:web`). Desplegar con `npm run deploy:web`. URL pública:
   https://terreno-62d96.web.app
+  **Versión visible (2026-11-23):** `build:web` corre `scripts/buildWeb.js`,
+  que incrusta la fecha/hora del build en `EXPO_PUBLIC_VERSION`; `HomeScreen`
+  la muestra abajo ("Versión 23/11, 11:36"). Para saber si un vendedor tiene
+  la última, pedirle que mire eso. `firebase.json` manda `no-cache` para
+  `index.html`/rutas y cache largo solo para `/_expo/static/**` (archivos con
+  hash) — antes el celular podía quedarse hasta 1 h con la versión vieja.
+  **Fotos y facturación:** si las subidas fallan con `storage/quota-exceeded`
+  aunque haya poco espacio usado, revisar la cuenta de facturación de Google
+  Cloud: el 2026-11-23 estaba "disabled in state delinquent" (cobro fallido)
+  con el plan todavía en Blaze — Firestore sigue andando (cuota gratis) pero
+  Storage no. Se diagnostica subiendo un archivo con firebase-admin.
   **Importante — no usar `firebase login` para desplegar**: el login normal
   de `firebase-tools` (OAuth de usuario) resultó poco confiable en esta
   máquina (2026-09-08) — el token de acceso vence a la hora y el refresh

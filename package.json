@@ -34,7 +34,7 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
-    "build:web": "expo export -p web",
+    "build:web": "node scripts/buildWeb.js",
     "deploy:web": "npm run build:web && dotenv -e .env -- npx firebase-tools deploy --only hosting",
     "seed:tiendas": "tsx scripts/seedTiendas.ts",
     "importar:tiendas": "tsx scripts/importarTiendas.ts",
