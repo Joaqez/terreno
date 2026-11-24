@@ -1,8 +1,9 @@
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import React, { useEffect } from 'react';
-import { Image, Pressable, StyleSheet, Text } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import CuadroFoto from '../components/CuadroFoto';
 import { PrimaryButton, Screen, Subtitle, Title } from '../components/ui';
-import { colors, radius, spacing } from '../theme';
+import { colors, spacing } from '../theme';
 import { calcularDistanciaKm } from '../lib/distancia';
 import { useFotoConSubida } from '../lib/useFotoConSubida';
 import { obtenerUbicacionPrecisa } from '../lib/useUbicacionActual';
@@ -13,14 +14,19 @@ type Props = NativeStackScreenProps<RootStackParamList, 'FotoAntes'>;
 
 export default function FotoAntesScreen({ navigation, route }: Props) {
   const { tiendaId } = route.params;
-  const { tiendas, jornada, iniciarBorrador, actualizarBorrador, borrador } = useTerrenoStore();
+  const { tiendas, jornada, actualizarBorrador, borrador } = useTerrenoStore();
   const tienda = tiendas.find((t) => t.id === tiendaId);
-  const { fotoUri, fotoUrl, subiendo, error, capturar } = useFotoConSubida();
+  const { fotoUri, fotoUrl, subiendo, error, capturar } = useFotoConSubida(
+    borrador?.tiendaId === tiendaId ? borrador.fotoAntesUrl : undefined
+  );
 
   useEffect(() => {
-    // Empieza un borrador nuevo cada vez que se entra a esta pantalla desde la ruta.
+    // La visita (borrador) la crea RutaScreen al verificar la ubicación. Sin
+    // ella (ej. botón atrás del navegador después de finalizar) se vuelve a
+    // la ruta: crearla aquí se saltaría la verificación de distancia.
     if (borrador?.tiendaId !== tiendaId) {
-      iniciarBorrador(tiendaId);
+      navigation.navigate('Ruta');
+      return;
     }
     // Si RutaScreen ya verificó la distancia, esa lectura es la de la visita.
     if (useTerrenoStore.getState().borrador?.ubicacionVendedor) return;
@@ -40,48 +46,35 @@ export default function FotoAntesScreen({ navigation, route }: Props) {
 
   return (
     <Screen>
-      <Title>{tienda?.nombre ?? 'Tienda'}</Title>
-      <Subtitle>Apenas llegues, antes de conversar con el encargado.</Subtitle>
+      <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false}>
+        <Title>Foto de antes</Title>
+        <Subtitle>Apenas llegues, antes de conversar con el encargado.</Subtitle>
 
-      <Pressable
-        style={styles.capture}
-        onPress={() => capturar(`jornadas/${jornada?.id}/visitas/${tiendaId}/antes-${Date.now()}.jpg`)}
-      >
-        {fotoUri ? (
-          <Image source={{ uri: fotoUri }} style={styles.preview} />
-        ) : (
-          <Text style={styles.captureText}>Fotografía — ANTES{'\n'}Exhibidor, refrigerador o góndola con productos</Text>
-        )}
-      </Pressable>
+        <CuadroFoto
+          fotoUri={fotoUri}
+          subiendo={subiendo}
+          ayuda="Nuestro exhibidor, tal como lo encuentras."
+          onPress={() => capturar(`jornadas/${jornada?.id}/visitas/${tiendaId}/antes-${Date.now()}.jpg`)}
+        />
 
-      {error ? <Text style={styles.errorText}>{error}</Text> : null}
+        {error ? <Text style={styles.errorText}>{error}</Text> : null}
+      </ScrollView>
 
-      <PrimaryButton
-        title="Continuar"
-        disabled={!fotoUrl || subiendo}
-        loading={subiendo}
-        onPress={() => {
-          actualizarBorrador({ fotoAntesUrl: fotoUrl! });
-          navigation.navigate('JefeTienda', { tiendaId });
-        }}
-      />
+      <View style={{ paddingTop: spacing.md }}>
+        <PrimaryButton
+          title="Continuar"
+          disabled={!fotoUrl || subiendo}
+          loading={subiendo}
+          onPress={() => {
+            actualizarBorrador({ fotoAntesUrl: fotoUrl! });
+            navigation.navigate('JefeTienda', { tiendaId });
+          }}
+        />
+      </View>
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  capture: {
-    aspectRatio: 4 / 3,
-    borderWidth: 1.5,
-    borderStyle: 'dashed',
-    borderColor: colors.border,
-    borderRadius: radius.lg,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: spacing.lg,
-    overflow: 'hidden',
-  },
-  captureText: { textAlign: 'center', color: colors.inkSoft, fontWeight: '600', paddingHorizontal: spacing.lg },
-  preview: { width: '100%', height: '100%' },
-  errorText: { color: colors.danger, fontSize: 13, marginBottom: spacing.md },
+  errorText: { color: colors.danger, fontSize: 14.5, marginBottom: spacing.md },
 });

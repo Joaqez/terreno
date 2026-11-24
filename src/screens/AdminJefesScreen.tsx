@@ -51,9 +51,6 @@ export default function AdminJefesScreen({ navigation }: Props) {
 
   return (
     <Screen>
-      <View style={{ marginBottom: spacing.sm }}>
-        <TextLink title="← Volver" onPress={() => navigation.goBack()} />
-      </View>
       <Title>Jefes de tienda</Title>
       <Subtitle>
         {filtrados.length} {verBajas ? 'que ya no trabajan en su tienda' : 'activos'}
@@ -115,7 +112,7 @@ const styles = StyleSheet.create({
   filtros: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginBottom: spacing.md },
   chip: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: radius.pill, borderWidth: 1, borderColor: colors.border },
   chipActivo: { backgroundColor: colors.accent, borderColor: colors.accent },
-  chipTexto: { fontSize: 12.5, fontWeight: '600', color: colors.inkSoft },
+  chipTexto: { fontSize: 14, fontWeight: '600', color: colors.inkSoft },
   chipTextoActivo: { color: colors.accentInk },
   fila: {
     flexDirection: 'row',
@@ -125,8 +122,8 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
   },
-  nombre: { fontSize: 14, fontWeight: '700', color: colors.ink },
-  tienda: { fontSize: 12.5, color: colors.inkSoft, marginTop: 1 },
-  contacto: { fontSize: 12, color: colors.inkFaint, marginTop: 2 },
+  nombre: { fontSize: 15.5, fontWeight: '700', color: colors.ink },
+  tienda: { fontSize: 14, color: colors.inkSoft, marginTop: 1 },
+  contacto: { fontSize: 13.5, color: colors.inkFaint, marginTop: 2 },
   vacio: { color: colors.inkSoft, textAlign: 'center', marginTop: spacing.xl },
 });

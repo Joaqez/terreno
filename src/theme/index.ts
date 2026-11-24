@@ -11,7 +11,8 @@ export const colors = {
   bgElevated: '#FFFFFF',
   ink: '#17231F',
   inkSoft: '#5B6A64',
-  inkFaint: '#93A29C',
+  // Antes #93A29C: no se leía al sol (contraste ~2,6:1). Este da ~4,6:1.
+  inkFaint: '#66756F',
   border: '#E6EBE8',
 
   accent: '#24625B',

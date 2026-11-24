@@ -4,7 +4,7 @@ import { ActivityIndicator, Pressable, ScrollView, SectionList, StyleSheet, Text
 import { Field, Screen, Subtitle, TextLink, Title } from '../components/ui';
 import VisitaFila, { claveFechaLocal, formatearFecha, formatearHora } from '../components/VisitaFila';
 import { colors, radius, spacing } from '../theme';
-import { useTerrenoStore } from '../lib/store';
+import { nombreVisible, useTerrenoStore } from '../lib/store';
 import { RootStackParamList } from '../navigation/types';
 import { Visita } from '../types';
 
@@ -22,7 +22,7 @@ export default function AdminVisitasScreen({ navigation }: Props) {
   }, [cargarVisitasAdmin, cargarVendedores]);
 
   const nombreTienda = (id: string) => tiendas.find((t) => t.id === id)?.nombre ?? 'Tienda eliminada';
-  const nombreVendedor = (id: string) => vendedoresDisponibles.find((v) => v.id === id)?.nombre ?? 'Vendedor';
+  const nombreVendedor = (id: string) => nombreVisible(vendedoresDisponibles.find((v) => v.id === id));
 
   const vendedoresConVisitas = useMemo(
     () =>
@@ -54,9 +54,6 @@ export default function AdminVisitasScreen({ navigation }: Props) {
 
   return (
     <Screen>
-      <View style={{ marginBottom: spacing.sm }}>
-        <TextLink title="← Volver" onPress={() => navigation.goBack()} />
-      </View>
       <Title>Visitas registradas</Title>
       <Subtitle>
         {cargandoVisitasAdmin ? 'Cargando…' : `${total} visitas`}
@@ -68,7 +65,7 @@ export default function AdminVisitasScreen({ navigation }: Props) {
         <View style={styles.filtros}>
           <Chip texto="Todos" activo={!vendedorFiltro} onPress={() => setVendedorFiltro(null)} />
           {vendedoresConVisitas.map((v) => (
-            <Chip key={v.id} texto={v.nombre} activo={vendedorFiltro === v.id} onPress={() => setVendedorFiltro(v.id)} />
+            <Chip key={v.id} texto={nombreVisible(v)} activo={vendedorFiltro === v.id} onPress={() => setVendedorFiltro(v.id)} />
           ))}
         </View>
       </ScrollView>
@@ -88,7 +85,8 @@ export default function AdminVisitasScreen({ navigation }: Props) {
             <VisitaFila
               visita={item}
               titulo={nombreTienda(item.tiendaId)}
-              detalle={`${formatearHora(item.horaInicio)} · ${nombreVendedor(item.vendedorId)}`}
+              // "por": sin eso "· Santiago" se confundía con la ciudad.
+              detalle={`${formatearHora(item.horaInicio)} · por ${nombreVendedor(item.vendedorId)}`}
               onPress={() => navigation.navigate('AdminVisitaDetalle', { visitaId: item.id })}
             />
           )}
@@ -112,14 +110,16 @@ function Chip({ texto, activo, onPress }: { texto: string; activo: boolean; onPr
 }
 
 const styles = StyleSheet.create({
-  filtrosScroll: { flexGrow: 0, marginBottom: spacing.md },
+  // flexShrink 0: en web el ScrollView se encogía hasta dejar los filtros
+  // cortados (solo se veía el borde de arriba).
+  filtrosScroll: { flexGrow: 0, flexShrink: 0, marginBottom: spacing.md },
   filtros: { flexDirection: 'row', gap: spacing.sm },
   chip: { paddingHorizontal: 14, paddingVertical: 7, borderRadius: radius.pill, borderWidth: 1, borderColor: colors.border },
   chipActivo: { backgroundColor: colors.accent, borderColor: colors.accent },
-  chipTexto: { fontSize: 12.5, fontWeight: '600', color: colors.inkSoft },
+  chipTexto: { fontSize: 14, fontWeight: '600', color: colors.inkSoft },
   chipTextoActivo: { color: colors.accentInk },
   seccion: {
-    fontSize: 12,
+    fontSize: 13.5,
     fontWeight: '700',
     color: colors.inkSoft,
     textTransform: 'uppercase',

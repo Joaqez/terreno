@@ -1,9 +1,9 @@
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import React, { useMemo, useState } from 'react';
-import { FlatList, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
-import { Field, PrimaryButton, Screen, Subtitle, Title } from '../components/ui';
+import { Pressable, SectionList, StyleSheet, Text, TextInput, View } from 'react-native';
+import { PrimaryButton, Screen, Subtitle, Title } from '../components/ui';
 import { colors, radius, spacing } from '../theme';
-import { productosParaTienda } from '../lib/catalogo';
+import { agruparPorLinea, productosParaTienda } from '../lib/catalogo';
 import { useTerrenoStore } from '../lib/store';
 import { RootStackParamList } from '../navigation/types';
 import { ItemPedido, Producto } from '../types';
@@ -59,17 +59,25 @@ export default function PedidoScreen({ navigation, route }: Props) {
   const seleccionados = productos.filter((p) => (cantidades[p.id] ?? 0) > 0);
   const totalUnidades = seleccionados.reduce((n, p) => n + cantidades[p.id], 0);
 
-  const visibles = useMemo(() => {
+  // Agrupado por línea igual que "Productos en tienda" (2026-11-23): cada
+  // fila muestra solo el sabor y la línea va como encabezado.
+  const lineas = useMemo(() => agruparPorLinea(productos), [productos]);
+
+  const secciones = useMemo(() => {
     const palabras = normalizar(busqueda).split(/\s+/).filter(Boolean);
-    return productos
-      .filter((p) => !soloSeleccionados || (cantidades[p.id] ?? 0) > 0)
-      .filter((p) => filtro !== 'faltan' || falta(p))
-      .filter((p) => {
-        const texto = normalizar(`${p.nombre} ${p.marca} ${p.sku}`);
-        return palabras.every((w) => texto.includes(w));
-      });
+    return lineas
+      .map((l) => ({
+        titulo: l.titulo,
+        data: l.items.filter(({ producto: p, sabor }) => {
+          if (soloSeleccionados && !((cantidades[p.id] ?? 0) > 0)) return false;
+          if (filtro === 'faltan' && !falta(p)) return false;
+          const texto = normalizar(`${l.titulo} ${sabor} ${p.nombre} ${p.marca} ${p.sku}`);
+          return palabras.every((w) => texto.includes(w));
+        }),
+      }))
+      .filter((s) => s.data.length);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [productos, busqueda, soloSeleccionados, filtro, estado, cantidades]);
+  }, [lineas, busqueda, soloSeleccionados, filtro, estado, cantidades]);
 
   function fijar(productoId: string, cantidad: number) {
     const nuevo = { ...manual, [productoId]: Math.max(0, cantidad) };
@@ -82,9 +90,10 @@ export default function PedidoScreen({ navigation, route }: Props) {
     if (!inventario) return undefined;
     const { enExhibidor, enBodega } = estado(p);
     if (enExhibidor && enBodega) return undefined;
-    const bodega = inventario.bodegaRevisada ? 'bodega' : 'bodega (sin revisar)';
-    if (!enExhibidor && !enBodega) return `No está en exhibidor ni ${bodega}`;
-    return enExhibidor ? `Falta en ${bodega}` : 'Falta en exhibidor';
+    // Textos cortos para que quepan en una línea junto al contador.
+    if (!enExhibidor && !enBodega) return inventario.bodegaRevisada ? 'No hay en la tienda' : 'Falta en exhibidor · bodega sin revisar';
+    if (!enBodega) return inventario.bodegaRevisada ? 'Falta en bodega' : 'Bodega sin revisar';
+    return 'Falta en exhibidor';
   }
 
   function continuar() {
@@ -103,41 +112,53 @@ export default function PedidoScreen({ navigation, route }: Props) {
 
   return (
     <Screen>
-      <Title>Pedido</Title>
-      <Subtitle>{tienda?.nombre}</Subtitle>
-
-      {inventario ? (
-        <Text style={styles.sugerencia}>
-          Cantidades sugeridas según el stock que marcaste: 10 si no está en ningún lado, 5 si falta en exhibidor o
-          bodega. Ajusta lo que necesites.
-        </Text>
-      ) : null}
-
-      <Field label="Buscar producto" placeholder="Ej: ignite v80 mint" value={busqueda} onChangeText={setBusqueda} />
-
-      <View style={styles.filtros}>
-        <Chip texto={`Todos (${productos.length})`} activo={filtro === 'todos'} onPress={() => setFiltro('todos')} />
-        {inventario ? (
-          <Chip texto={`Faltan (${nFaltan})`} activo={filtro === 'faltan'} onPress={() => setFiltro('faltan')} />
-        ) : null}
-        <Chip
-          texto={`Seleccionados (${seleccionados.length})`}
-          activo={soloSeleccionados}
-          onPress={() => setFiltro('seleccionados')}
-        />
-      </View>
-
-      <FlatList
+      {/* El encabezado va dentro de la lista y se desplaza con ella, para que
+          en el celular se vean más productos a la vez (2026-11-23). */}
+      <SectionList
         style={{ flex: 1 }}
-        data={visibles}
-        keyExtractor={(p) => p.id}
+        sections={secciones}
+        keyExtractor={(i) => i.producto.id}
         keyboardShouldPersistTaps="handled"
+        stickySectionHeadersEnabled={false}
+        showsVerticalScrollIndicator={false}
+        ListHeaderComponent={
+          <View>
+            <Title>Pedido</Title>
+            <Subtitle>
+              {inventario
+                ? 'Viene sugerido según el stock que marcaste. Ajusta lo que necesites.'
+                : 'Elige los productos y cantidades.'}
+            </Subtitle>
+
+            <TextInput
+              style={styles.buscador}
+              placeholder="Buscar producto (ej: ignite v80 mint)"
+              placeholderTextColor={colors.inkFaint}
+              value={busqueda}
+              onChangeText={setBusqueda}
+            />
+
+            <View style={styles.filtros}>
+              <Chip texto={`Todos (${productos.length})`} activo={filtro === 'todos'} onPress={() => setFiltro('todos')} />
+              {inventario ? (
+                <Chip texto={`Faltan (${nFaltan})`} activo={filtro === 'faltan'} onPress={() => setFiltro('faltan')} />
+              ) : null}
+              <Chip
+                texto={`En el pedido (${seleccionados.length})`}
+                activo={soloSeleccionados}
+                onPress={() => setFiltro('seleccionados')}
+              />
+            </View>
+          </View>
+        }
+        renderSectionHeader={({ section }) => <Text style={styles.lineaTitulo}>{section.titulo}</Text>}
         renderItem={({ item }) => (
           <FilaProducto
-            producto={item}
-            cantidad={cantidades[item.id] ?? 0}
-            onCambiar={(c) => fijar(item.id, c)}
-            aviso={aviso(item)}
+            producto={item.producto}
+            sabor={item.sabor}
+            cantidad={cantidades[item.producto.id] ?? 0}
+            onCambiar={(c) => fijar(item.producto.id, c)}
+            aviso={aviso(item.producto)}
           />
         )}
         ListEmptyComponent={
@@ -166,11 +187,14 @@ export default function PedidoScreen({ navigation, route }: Props) {
 
 function FilaProducto({
   producto,
+  sabor,
   cantidad,
   onCambiar,
   aviso,
 }: {
   producto: Producto;
+  /** Nombre corto dentro de la línea (ej. "Cool Mint"). */
+  sabor: string;
   cantidad: number;
   onCambiar: (cantidad: number) => void;
   /** Ej. "No está en la tienda" — sugerencia para pedir. */
@@ -179,10 +203,8 @@ function FilaProducto({
   return (
     <View style={[styles.fila, cantidad > 0 && styles.filaSeleccionada]}>
       <View style={{ flex: 1 }}>
-        <Text style={styles.nombre}>{producto.nombre}</Text>
-        <Text style={styles.meta}>
-          {producto.marca} · {producto.sku}
-        </Text>
+        <Text style={styles.nombre}>{sabor}</Text>
+        <Text style={styles.meta}>{producto.sku}</Text>
         {aviso ? <Text style={styles.aviso}>{aviso}</Text> : null}
       </View>
       {cantidad === 0 ? (
@@ -219,18 +241,38 @@ function Chip({ texto, activo, onPress }: { texto: string; activo: boolean; onPr
 }
 
 const styles = StyleSheet.create({
-  sugerencia: {
-    backgroundColor: colors.accentSoft,
-    color: colors.ink,
-    fontSize: 12.5,
+  buscador: {
+    borderWidth: 1,
+    borderColor: colors.border,
     borderRadius: radius.sm,
-    padding: spacing.sm,
-    marginBottom: spacing.md,
+    paddingHorizontal: spacing.md,
+    minHeight: 46,
+    fontSize: 16,
+    color: colors.ink,
+    backgroundColor: colors.bgElevated,
+    marginBottom: spacing.sm,
   },
-  filtros: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.sm },
-  chip: { paddingHorizontal: 14, paddingVertical: 7, borderRadius: radius.pill, borderWidth: 1, borderColor: colors.border },
+  filtros: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginBottom: spacing.xs },
+  lineaTitulo: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: colors.ink,
+    textTransform: 'uppercase',
+    letterSpacing: 0.3,
+    marginTop: spacing.lg,
+    marginBottom: spacing.xs,
+  },
+  chip: {
+    paddingHorizontal: 14,
+    minHeight: 40,
+    justifyContent: 'center',
+    borderRadius: radius.pill,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.bgElevated,
+  },
   chipActivo: { backgroundColor: colors.accent, borderColor: colors.accent },
-  chipTexto: { fontSize: 12.5, fontWeight: '600', color: colors.inkSoft },
+  chipTexto: { fontSize: 14, fontWeight: '600', color: colors.inkSoft },
   chipTextoActivo: { color: colors.accentInk },
   fila: {
     flexDirection: 'row',
@@ -242,27 +284,27 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.border,
   },
   filaSeleccionada: { backgroundColor: colors.accentSoft },
-  nombre: { fontSize: 13.5, fontWeight: '600', color: colors.ink },
-  meta: { fontSize: 11.5, color: colors.inkFaint, marginTop: 2 },
-  aviso: { fontSize: 11.5, color: colors.amber, fontWeight: '700', marginTop: 2 },
-  agregar: { borderWidth: 1.5, borderColor: colors.accent, borderRadius: radius.sm, paddingHorizontal: 12, paddingVertical: 7 },
-  agregarTexto: { color: colors.accent, fontWeight: '700', fontSize: 12.5 },
+  nombre: { fontSize: 15, fontWeight: '600', color: colors.ink },
+  meta: { fontSize: 13, color: colors.inkFaint, marginTop: 2 },
+  aviso: { fontSize: 13, color: colors.amber, fontWeight: '700', marginTop: 2 },
+  agregar: { borderWidth: 1.5, borderColor: colors.accent, borderRadius: radius.sm, paddingHorizontal: 16, minHeight: 44, justifyContent: 'center' },
+  agregarTexto: { color: colors.accent, fontWeight: '700', fontSize: 14 },
   contador: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   botonContador: {
-    width: 32,
-    height: 32,
+    width: 44,
+    height: 44,
     borderRadius: radius.sm,
     backgroundColor: colors.accent,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  botonContadorTexto: { color: colors.accentInk, fontWeight: '700', fontSize: 17 },
+  botonContadorTexto: { color: colors.accentInk, fontWeight: '700', fontSize: 18.5 },
   cantidad: {
-    width: 44,
-    height: 32,
+    width: 48,
+    height: 44,
     textAlign: 'center',
     fontWeight: '700',
-    fontSize: 14,
+    fontSize: 16,
     color: colors.ink,
     borderWidth: 1,
     borderColor: colors.border,
@@ -271,5 +313,5 @@ const styles = StyleSheet.create({
   },
   vacio: { color: colors.inkSoft, textAlign: 'center', marginTop: spacing.xl, paddingHorizontal: spacing.lg },
   pie: { paddingTop: spacing.md, borderTopWidth: 1, borderTopColor: colors.border, gap: spacing.sm },
-  resumen: { fontSize: 13, fontWeight: '600', color: colors.ink, textAlign: 'center' },
+  resumen: { fontSize: 14.5, fontWeight: '600', color: colors.ink, textAlign: 'center' },
 });

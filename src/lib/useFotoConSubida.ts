@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { takePhoto } from './camera';
+import { avisar } from './avisos';
 import { subirFoto } from './storage';
 
 /**
@@ -13,9 +14,11 @@ import { subirFoto } from './storage';
  * web (`react-native-web`) `Alert.alert` no hace nada — es un no-op — así
  * que ahí un fallo de subida quedaba completamente silencioso.
  */
-export function useFotoConSubida() {
-  const [fotoUri, setFotoUri] = useState<string | null>(null);
-  const [fotoUrl, setFotoUrl] = useState<string | null>(null);
+export function useFotoConSubida(urlInicial?: string) {
+  // `urlInicial`: la foto ya subida en esta visita (si el vendedor vuelve
+  // atrás a esta pantalla, no tiene que tomarla de nuevo).
+  const [fotoUri, setFotoUri] = useState<string | null>(urlInicial ?? null);
+  const [fotoUrl, setFotoUrl] = useState<string | null>(urlInicial ?? null);
   const [subiendo, setSubiendo] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -34,6 +37,7 @@ export function useFotoConSubida() {
       // El código (ej. storage/unauthorized, storage/retry-limit-exceeded) sirve
       // para diagnosticar desde una captura de pantalla del vendedor.
       const codigo = (err as { code?: string })?.code;
+      avisar('No se pudo subir la foto', 'error');
       setError(
         `No se pudo subir la foto. Revisa tu conexión e intenta de nuevo tocando la foto otra vez.${
           codigo ? ` (código: ${codigo})` : ''

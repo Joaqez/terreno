@@ -43,9 +43,9 @@ function Lista({ titulo, items, vacio }: { titulo: string; items: ItemInventario
 
 const styles = StyleSheet.create({
   card: { backgroundColor: colors.bgElevated, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, padding: spacing.lg },
-  titulo: { fontSize: 13, fontWeight: '700', color: colors.ink, marginBottom: 4 },
-  item: { fontSize: 12.5, color: colors.ink, lineHeight: 19 },
-  nota: { fontSize: 12.5, color: colors.inkSoft, fontStyle: 'italic' },
+  titulo: { fontSize: 14.5, fontWeight: '700', color: colors.ink, marginBottom: 4 },
+  item: { fontSize: 14, color: colors.ink, lineHeight: 21 },
+  nota: { fontSize: 14, color: colors.inkSoft, fontStyle: 'italic' },
   separador: { height: 1, backgroundColor: colors.border, marginVertical: spacing.md },
-  pie: { fontSize: 11.5, color: colors.inkFaint, marginTop: spacing.md },
+  pie: { fontSize: 13, color: colors.inkFaint, marginTop: spacing.md },
 });

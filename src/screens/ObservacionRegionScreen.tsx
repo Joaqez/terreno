@@ -1,8 +1,7 @@
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import React, { useState } from 'react';
-import { View } from 'react-native';
-import { Field, PrimaryButton, Screen, Subtitle, TextLink, Title } from '../components/ui';
-import { spacing } from '../theme';
+import { Field, PrimaryButton, Screen, Subtitle, Title } from '../components/ui';
+import { avisar } from '../lib/avisos';
 import { useTerrenoStore } from '../lib/store';
 import { RootStackParamList } from '../navigation/types';
 
@@ -17,14 +16,12 @@ export default function ObservacionRegionScreen({ navigation, route }: Props) {
   function confirmar() {
     if (motivo.trim().length === 0) return;
     marcarGestionRapida(tiendaId, motivo.trim());
+    avisar(`${tienda?.nombre ?? 'Tienda'}: gestión registrada`);
     navigation.goBack();
   }
 
   return (
     <Screen>
-      <View style={{ marginBottom: spacing.sm }}>
-        <TextLink title="← Cancelar y volver" onPress={() => navigation.goBack()} />
-      </View>
       <Title>{tienda?.nombre ?? 'Tienda'}</Title>
       <Subtitle>Cuéntanos cómo gestionaste esta tienda — es obligatorio.</Subtitle>
 

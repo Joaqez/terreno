@@ -52,7 +52,7 @@ export default function ChecklistScreen({ navigation, route }: Props) {
   return (
     <Screen>
       <Title>Mantención del exhibidor</Title>
-      <Subtitle>{tienda?.nombre}</Subtitle>
+      <Subtitle>Responde todas. Si algo está mal, cuenta qué pasa.</Subtitle>
 
       <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false}>
         {preguntas.map((p, i) => (
@@ -104,7 +104,7 @@ const estiloActivo = StyleSheet.create({
 
 const styles = StyleSheet.create({
   pregunta: { paddingVertical: spacing.md, borderBottomWidth: 1, borderBottomColor: colors.border },
-  preguntaTexto: { fontSize: 14.5, fontWeight: '600', color: colors.ink, marginBottom: spacing.sm },
+  preguntaTexto: { fontSize: 16, fontWeight: '600', color: colors.ink, marginBottom: spacing.sm },
   opciones: { flexDirection: 'row', gap: spacing.sm },
   opcion: {
     flex: 1,
@@ -115,7 +115,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: colors.bgElevated,
   },
-  opcionTexto: { fontWeight: '700', fontSize: 13.5, color: colors.inkSoft },
+  opcionTexto: { fontWeight: '700', fontSize: 15, color: colors.inkSoft },
   opcionTextoActivo: { color: colors.accentInk },
   comentario: {
     marginTop: spacing.sm,
@@ -124,11 +124,11 @@ const styles = StyleSheet.create({
     borderRadius: radius.sm,
     padding: spacing.sm,
     minHeight: 60,
-    fontSize: 14,
+    fontSize: 16,
     color: colors.ink,
     backgroundColor: colors.bgElevated,
     textAlignVertical: 'top',
   },
   pie: { paddingTop: spacing.md, gap: spacing.sm },
-  faltan: { fontSize: 12.5, color: colors.inkSoft, textAlign: 'center' },
+  faltan: { fontSize: 14, color: colors.inkSoft, textAlign: 'center' },
 });

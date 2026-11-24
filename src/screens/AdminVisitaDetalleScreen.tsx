@@ -6,7 +6,8 @@ import { Badge, Screen, Subtitle, TextLink, Title } from '../components/ui';
 import { etiquetaVisita, formatearFecha, formatearHora } from '../components/VisitaFila';
 import { colors, radius, spacing } from '../theme';
 import { PRECISION_MAXIMA_M, formatearMetros, textoFueraDeRango } from '../lib/rangoVisita';
-import { useTerrenoStore } from '../lib/store';
+import { avisar } from '../lib/avisos';
+import { nombreVisible, useTerrenoStore } from '../lib/store';
 import { RootStackParamList } from '../navigation/types';
 import { RespuestaChecklist, Tienda, UbicacionVisita } from '../types';
 
@@ -27,7 +28,6 @@ export default function AdminVisitaDetalleScreen({ navigation, route }: Props) {
   if (!visita) {
     return (
       <Screen>
-        <TextLink title="← Volver" onPress={() => navigation.goBack()} />
         <Title>Visita no encontrada</Title>
       </Screen>
     );
@@ -40,9 +40,6 @@ export default function AdminVisitaDetalleScreen({ navigation, route }: Props) {
 
   return (
     <Screen>
-      <View style={{ marginBottom: spacing.sm }}>
-        <TextLink title="← Volver" onPress={() => navigation.goBack()} />
-      </View>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }}>
         <Title>{tienda?.nombre ?? 'Tienda eliminada'}</Title>
         <Subtitle>{tienda ? `${tienda.direccion}, ${tienda.comuna}` : visita.tiendaId}</Subtitle>
@@ -60,7 +57,7 @@ export default function AdminVisitaDetalleScreen({ navigation, route }: Props) {
         ) : null}
 
         <View style={styles.card}>
-          <Linea etiqueta="Vendedor" valor={vendedor?.nombre ?? '—'} />
+          <Linea etiqueta="Vendedor" valor={nombreVisible(vendedor, '—')} />
           <Linea etiqueta="Fecha" valor={formatearFecha(visita.horaInicio)} />
           <Linea etiqueta="Horario" valor={`${formatearHora(visita.horaInicio)} – ${formatearHora(visita.horaFin)}`} />
           {visita.modo === 'presencial' ? (
@@ -169,6 +166,7 @@ export default function AdminVisitaDetalleScreen({ navigation, route }: Props) {
                               ubicacionPorConfirmar: false,
                             });
                             setConfirmandoUbicacion(false);
+                            avisar('Ubicación de la tienda actualizada');
                           }}
                         />
                         <TextLink title="Cancelar" tone="danger" onPress={() => setConfirmandoUbicacion(false)} />
@@ -251,19 +249,19 @@ const estiloRespuesta = StyleSheet.create({
 
 const styles = StyleSheet.create({
   cardFuera: { borderColor: colors.danger, backgroundColor: colors.dangerSoft, marginBottom: spacing.sm },
-  fueraTitulo: { fontSize: 13, fontWeight: '700', color: colors.danger, marginBottom: 4 },
-  porConfirmar: { fontSize: 12.5, color: colors.amber, fontWeight: '600', marginTop: spacing.sm },
+  fueraTitulo: { fontSize: 14.5, fontWeight: '700', color: colors.danger, marginBottom: 4 },
+  porConfirmar: { fontSize: 14, color: colors.amber, fontWeight: '600', marginTop: spacing.sm },
   fijarUbicacion: { marginTop: spacing.md, paddingTop: spacing.md, borderTopWidth: 1, borderTopColor: colors.border, gap: spacing.sm },
-  ubicacionFijada: { fontSize: 13, color: colors.success, fontWeight: '600' },
+  ubicacionFijada: { fontSize: 14.5, color: colors.success, fontWeight: '600' },
   filaBotones: { flexDirection: 'row', gap: spacing.xl },
-  comentarioNo: { fontSize: 12.5, color: colors.danger, marginTop: -2, marginBottom: 6, fontStyle: 'italic' },
-  respuesta: { fontSize: 13, fontWeight: '700', paddingHorizontal: 8, paddingVertical: 3, borderRadius: radius.sm, overflow: 'hidden' },
+  comentarioNo: { fontSize: 14, color: colors.danger, marginTop: -2, marginBottom: 6, fontStyle: 'italic' },
+  respuesta: { fontSize: 14.5, fontWeight: '700', paddingHorizontal: 8, paddingVertical: 3, borderRadius: radius.sm, overflow: 'hidden' },
   card: { backgroundColor: colors.bgElevated, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, padding: spacing.lg },
   linea: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 5, gap: spacing.md },
-  lineaEtiqueta: { fontSize: 13, color: colors.inkSoft },
-  lineaValor: { fontSize: 13, fontWeight: '600', color: colors.ink, flexShrink: 1, textAlign: 'right' },
+  lineaEtiqueta: { fontSize: 14.5, color: colors.inkSoft },
+  lineaValor: { fontSize: 14.5, fontWeight: '600', color: colors.ink, flexShrink: 1, textAlign: 'right' },
   etiqueta: {
-    fontSize: 12,
+    fontSize: 13.5,
     fontWeight: '700',
     color: colors.inkSoft,
     textTransform: 'uppercase',
@@ -271,7 +269,7 @@ const styles = StyleSheet.create({
     marginTop: spacing.lg,
     marginBottom: spacing.sm,
   },
-  texto: { fontSize: 13.5, color: colors.ink, lineHeight: 20 },
+  texto: { fontSize: 15, color: colors.ink, lineHeight: 22 },
   itemPedido: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -280,10 +278,10 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
   },
-  itemNombre: { fontSize: 13, fontWeight: '600', color: colors.ink },
-  itemSku: { fontSize: 11, color: colors.inkFaint, marginTop: 1 },
-  itemCantidad: { fontSize: 15, fontWeight: '700', color: colors.accent },
+  itemNombre: { fontSize: 14.5, fontWeight: '600', color: colors.ink },
+  itemSku: { fontSize: 12.5, color: colors.inkFaint, marginTop: 1 },
+  itemCantidad: { fontSize: 16.5, fontWeight: '700', color: colors.accent },
   foto: { width: '100%', aspectRatio: 3 / 4, borderRadius: radius.md, backgroundColor: colors.border },
   sinFoto: { aspectRatio: 4 / 3, alignItems: 'center', justifyContent: 'center' },
-  ayudaFoto: { fontSize: 11.5, color: colors.inkFaint, textAlign: 'center', marginTop: 4 },
+  ayudaFoto: { fontSize: 13, color: colors.inkFaint, textAlign: 'center', marginTop: 4 },
 });

@@ -3,6 +3,8 @@ import React, { useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Badge, Field, PrimaryButton, Screen, Subtitle, TextLink, Title } from '../components/ui';
 import { colors, radius, spacing } from '../theme';
+import { Ionicons } from '@expo/vector-icons';
+import { avisar } from '../lib/avisos';
 import { useTerrenoStore } from '../lib/store';
 import { RootStackParamList } from '../navigation/types';
 import { PreguntaMantencion } from '../types';
@@ -27,13 +29,11 @@ export default function AdminChecklistScreen({ navigation }: Props) {
     if (!nueva.trim()) return;
     crearPreguntaMantencion(nueva);
     setNueva('');
+    avisar('Pregunta agregada');
   }
 
   return (
     <Screen>
-      <View style={{ marginBottom: spacing.sm }}>
-        <TextLink title="← Volver" onPress={() => navigation.goBack()} />
-      </View>
       <Title>Checklist de mantención</Title>
       <Subtitle>
         {activas} {activas === 1 ? 'pregunta activa' : 'preguntas activas'}. Se responden con Sí / No / No aplica en cada
@@ -45,14 +45,18 @@ export default function AdminChecklistScreen({ navigation }: Props) {
           <View key={p.id} style={[styles.fila, !p.activa && { opacity: 0.55 }]}>
             <View style={styles.flechas}>
               <Pressable hitSlop={6} disabled={i === 0} onPress={() => moverPreguntaMantencion(p.id, -1)}>
-                <Text style={[styles.flecha, i === 0 && styles.flechaOff]}>▲</Text>
+                <Ionicons name="chevron-up" size={22} color={i === 0 ? colors.border : colors.accent} />
               </Pressable>
               <Pressable
                 hitSlop={6}
                 disabled={i === preguntasMantencion.length - 1}
                 onPress={() => moverPreguntaMantencion(p.id, 1)}
               >
-                <Text style={[styles.flecha, i === preguntasMantencion.length - 1 && styles.flechaOff]}>▼</Text>
+                <Ionicons
+                  name="chevron-down"
+                  size={22}
+                  color={i === preguntasMantencion.length - 1 ? colors.border : colors.accent}
+                />
               </Pressable>
             </View>
             <View style={{ flex: 1, gap: 4 }}>
@@ -70,7 +74,10 @@ export default function AdminChecklistScreen({ navigation }: Props) {
               <TextLink
                 title={p.activa ? 'Desactivar' : 'Activar'}
                 tone={p.activa ? 'danger' : 'accent'}
-                onPress={() => actualizarPreguntaMantencion(p.id, { activa: !p.activa })}
+                onPress={() => {
+                  actualizarPreguntaMantencion(p.id, { activa: !p.activa });
+                  avisar(p.activa ? 'Pregunta desactivada' : 'Pregunta activada');
+                }}
               />
             </View>
           </View>
@@ -95,6 +102,7 @@ export default function AdminChecklistScreen({ navigation }: Props) {
               onPress={() => {
                 if (editando) actualizarPreguntaMantencion(editando.id, { texto: textoEditado });
                 setEditando(null);
+                avisar('Pregunta guardada');
               }}
             />
             <Pressable onPress={() => setEditando(null)} style={{ marginTop: spacing.md, alignItems: 'center' }}>
@@ -117,21 +125,21 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.border,
   },
   flechas: { gap: 6, alignItems: 'center' },
-  flecha: { fontSize: 13, color: colors.accent },
+  flecha: { fontSize: 14.5, color: colors.accent },
   flechaOff: { color: colors.border },
-  texto: { fontSize: 14, fontWeight: '600', color: colors.ink },
+  texto: { fontSize: 15.5, fontWeight: '600', color: colors.ink },
   overlay: { flex: 1, backgroundColor: 'rgba(15,25,22,0.42)', justifyContent: 'flex-end' },
-  sheet: { backgroundColor: colors.bgElevated, borderTopLeftRadius: radius.lg, borderTopRightRadius: radius.lg, padding: spacing.xl },
-  sheetTitulo: { fontWeight: '700', fontSize: 16, marginBottom: spacing.md, color: colors.ink },
+  sheet: { backgroundColor: colors.bgElevated, borderTopLeftRadius: radius.lg, borderTopRightRadius: radius.lg, padding: spacing.xl, width: '100%', maxWidth: 760, alignSelf: 'center' },
+  sheetTitulo: { fontWeight: '700', fontSize: 17.5, marginBottom: spacing.md, color: colors.ink },
   input: {
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: radius.sm,
     padding: spacing.md,
-    fontSize: 14.5,
+    fontSize: 16,
     color: colors.ink,
     minHeight: 70,
     textAlignVertical: 'top',
   },
-  ayuda: { fontSize: 12, color: colors.inkFaint, marginTop: spacing.sm, marginBottom: spacing.lg },
+  ayuda: { fontSize: 13.5, color: colors.inkFaint, marginTop: spacing.sm, marginBottom: spacing.lg },
 });

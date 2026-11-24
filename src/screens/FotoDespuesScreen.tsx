@@ -1,6 +1,7 @@
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import React from 'react';
-import { Image, Pressable, StyleSheet, Text } from 'react-native';
+import { Image, ScrollView, StyleSheet, Text, View } from 'react-native';
+import CuadroFoto from '../components/CuadroFoto';
 import { PrimaryButton, Screen, Subtitle, Title } from '../components/ui';
 import { colors, radius, spacing } from '../theme';
 import { useFotoConSubida } from '../lib/useFotoConSubida';
@@ -11,54 +12,62 @@ type Props = NativeStackScreenProps<RootStackParamList, 'FotoDespues'>;
 
 export default function FotoDespuesScreen({ navigation, route }: Props) {
   const { tiendaId, tipo } = route.params;
-  const { tiendas, jornada, actualizarBorrador } = useTerrenoStore();
-  const tienda = tiendas.find((t) => t.id === tiendaId);
-  const { fotoUri, fotoUrl, subiendo, error, capturar } = useFotoConSubida();
+  const { jornada, borrador, actualizarBorrador } = useTerrenoStore();
+  const b = borrador?.tiendaId === tiendaId ? borrador : null;
+  const { fotoUri, fotoUrl, subiendo, error, capturar } = useFotoConSubida(b?.fotoDespuesUrl);
 
   return (
     <Screen>
-      <Title>{tienda?.nombre ?? 'Tienda'}</Title>
-      <Subtitle>Foto después de la visita — mismo ángulo, mostrando el resultado final.</Subtitle>
+      <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false}>
+        <Title>Foto de después</Title>
+        <Subtitle>Con el resultado final, desde el mismo ángulo que la de antes.</Subtitle>
 
-      <Pressable
-        style={styles.capture}
-        onPress={() => capturar(`jornadas/${jornada?.id}/visitas/${tiendaId}/despues-${Date.now()}.jpg`)}
-      >
-        {fotoUri ? (
-          <Image source={{ uri: fotoUri }} style={styles.preview} />
-        ) : (
-          <Text style={styles.captureText}>Fotografía — DESPUÉS</Text>
-        )}
-      </Pressable>
+        {/* La de antes como referencia, para repetir el ángulo (2026-11-23). */}
+        {b?.fotoAntesUrl ? (
+          <View style={styles.referencia}>
+            <Image source={{ uri: b.fotoAntesUrl }} style={styles.referenciaFoto} />
+            <Text style={styles.referenciaTexto}>Así estaba antes. Toma la de después desde el mismo lugar.</Text>
+          </View>
+        ) : null}
 
-      {error ? <Text style={styles.errorText}>{error}</Text> : null}
+        <CuadroFoto
+          fotoUri={fotoUri}
+          subiendo={subiendo}
+          ayuda="El exhibidor ya ordenado y repuesto."
+          onPress={() => capturar(`jornadas/${jornada?.id}/visitas/${tiendaId}/despues-${Date.now()}.jpg`)}
+        />
 
-      <PrimaryButton
-        title="Continuar"
-        disabled={!fotoUrl || subiendo}
-        loading={subiendo}
-        onPress={() => {
-          actualizarBorrador({ fotoDespuesUrl: fotoUrl! });
-          navigation.navigate('Observaciones', { tiendaId, tipo });
-        }}
-      />
+        {error ? <Text style={styles.errorText}>{error}</Text> : null}
+      </ScrollView>
+
+      <View style={{ paddingTop: spacing.md }}>
+        <PrimaryButton
+          title="Continuar"
+          disabled={!fotoUrl || subiendo}
+          loading={subiendo}
+          onPress={() => {
+            actualizarBorrador({ fotoDespuesUrl: fotoUrl! });
+            navigation.navigate('Observaciones', { tiendaId, tipo });
+          }}
+        />
+      </View>
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  capture: {
-    aspectRatio: 4 / 3,
-    borderWidth: 1.5,
-    borderStyle: 'dashed',
-    borderColor: colors.border,
-    borderRadius: radius.lg,
+  referencia: {
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: spacing.lg,
-    overflow: 'hidden',
+    gap: spacing.md,
+    backgroundColor: colors.bgElevated,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    padding: spacing.sm,
+    marginBottom: spacing.md,
   },
-  captureText: { textAlign: 'center', color: colors.inkSoft, fontWeight: '600' },
-  preview: { width: '100%', height: '100%' },
-  errorText: { color: colors.danger, fontSize: 13, marginBottom: spacing.md },
+  referenciaFoto: { width: 96, height: 72, borderRadius: radius.sm, backgroundColor: colors.border },
+  referenciaTexto: { flex: 1, fontSize: 14, color: colors.inkSoft, lineHeight: 19 },
+  errorText: { color: colors.danger, fontSize: 14.5, marginBottom: spacing.md },
 });

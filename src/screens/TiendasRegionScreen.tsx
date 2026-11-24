@@ -49,7 +49,7 @@ export default function TiendasRegionScreen({ navigation }: Props) {
             style={styles.btnListo}
             onPress={() => navigation.navigate('ObservacionRegion', { tiendaId: t.id })}
           >
-            <Text style={styles.btnListoText}>Listo</Text>
+            <Text style={styles.btnListoText}>Registrar gestión</Text>
           </Pressable>
         )}
       </View>
@@ -58,9 +58,6 @@ export default function TiendasRegionScreen({ navigation }: Props) {
 
   return (
     <Screen>
-      <View style={{ marginBottom: spacing.sm }}>
-        <TextLink title="← Volver" onPress={() => navigation.goBack()} />
-      </View>
       <Title>Tiendas de región</Title>
       <Subtitle>
         Seguimiento remoto (teléfono, WhatsApp, correo) — no requieren visita presencial.{' '}
@@ -89,9 +86,9 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.border,
     gap: spacing.md,
   },
-  nombre: { fontSize: 13.5, fontWeight: '600', color: colors.ink },
-  comuna: { fontSize: 12, color: colors.inkSoft, marginTop: 1 },
-  motivo: { fontSize: 12, color: colors.inkFaint, fontStyle: 'italic', marginTop: 4 },
-  btnListo: { backgroundColor: colors.accent, borderRadius: radius.sm, paddingVertical: 8, paddingHorizontal: 16 },
-  btnListoText: { color: colors.accentInk, fontWeight: '700', fontSize: 13 },
+  nombre: { fontSize: 15, fontWeight: '600', color: colors.ink },
+  comuna: { fontSize: 13.5, color: colors.inkSoft, marginTop: 1 },
+  motivo: { fontSize: 13.5, color: colors.inkFaint, fontStyle: 'italic', marginTop: 4 },
+  btnListo: { backgroundColor: colors.accent, borderRadius: radius.sm, minHeight: 44, justifyContent: 'center', paddingHorizontal: 14 },
+  btnListoText: { color: colors.accentInk, fontWeight: '700', fontSize: 14.5 },
 });

@@ -30,7 +30,7 @@ export default function JefeTiendaScreen({ navigation, route }: Props) {
   return (
     <Screen>
       <Title>¿Con quién hablaste?</Title>
-      <Subtitle>{tienda?.nombre}</Subtitle>
+      <Subtitle>Elige al encargado, agrégalo si es nuevo, u omite este paso.</Subtitle>
 
       <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
         {jefes.length ? (
@@ -89,8 +89,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.bgElevated,
   },
   filaSeleccionada: { borderColor: colors.accent, backgroundColor: colors.accentSoft },
-  nombre: { fontSize: 15, fontWeight: '700', color: colors.ink },
-  meta: { fontSize: 12.5, color: colors.inkSoft, marginTop: 2 },
+  nombre: { fontSize: 16.5, fontWeight: '700', color: colors.ink },
+  meta: { fontSize: 14, color: colors.inkSoft, marginTop: 2 },
   vacio: { color: colors.inkSoft, textAlign: 'center', marginVertical: spacing.lg },
   nuevo: {
     borderWidth: 1.5,
@@ -101,6 +101,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop: spacing.sm,
   },
-  nuevoTexto: { color: colors.accent, fontWeight: '700', fontSize: 14.5 },
+  nuevoTexto: { color: colors.accent, fontWeight: '700', fontSize: 16 },
   pie: { paddingTop: spacing.md },
 });

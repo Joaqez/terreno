@@ -83,8 +83,8 @@ const styles = StyleSheet.create({
   badges: { alignItems: 'flex-end', gap: 4 },
   miniatura: { width: 52, height: 52, borderRadius: radius.sm, backgroundColor: colors.border },
   sinFoto: { alignItems: 'center', justifyContent: 'center' },
-  sinFotoTexto: { fontSize: 10, color: colors.inkFaint },
-  titulo: { fontSize: 13.5, fontWeight: '600', color: colors.ink },
-  detalle: { fontSize: 12, color: colors.inkSoft, marginTop: 1 },
-  nota: { fontSize: 12, color: colors.inkFaint, marginTop: 3 },
+  sinFotoTexto: { fontSize: 11.5, color: colors.inkFaint },
+  titulo: { fontSize: 15, fontWeight: '600', color: colors.ink },
+  detalle: { fontSize: 13.5, color: colors.inkSoft, marginTop: 1 },
+  nota: { fontSize: 13.5, color: colors.inkFaint, marginTop: 3 },
 });

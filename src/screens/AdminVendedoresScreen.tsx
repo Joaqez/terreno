@@ -3,7 +3,7 @@ import React, { useEffect } from 'react';
 import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Badge, Screen, Subtitle, TextLink, Title } from '../components/ui';
 import { colors, spacing } from '../theme';
-import { useTerrenoStore } from '../lib/store';
+import { nombreVisible, useTerrenoStore } from '../lib/store';
 import { RootStackParamList } from '../navigation/types';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'AdminVendedores'>;
@@ -17,9 +17,6 @@ export default function AdminVendedoresScreen({ navigation }: Props) {
 
   return (
     <Screen>
-      <View style={{ marginBottom: spacing.sm }}>
-        <TextLink title="← Volver" onPress={() => navigation.goBack()} />
-      </View>
       <Title>Vendedores</Title>
       <Subtitle>{vendedoresDisponibles.length} cuentas registradas</Subtitle>
 
@@ -31,7 +28,7 @@ export default function AdminVendedoresScreen({ navigation }: Props) {
           return (
             <Pressable style={styles.fila} onPress={() => navigation.navigate('AdminVendedorDetalle', { vendedorId: item.id })}>
               <View style={{ flex: 1 }}>
-                <Text style={styles.nombre}>{item.nombre}</Text>
+                <Text style={styles.nombre}>{nombreVisible(item)}</Text>
                 <Text style={styles.email}>{item.email}</Text>
               </View>
               <View style={{ alignItems: 'flex-end', gap: 4 }}>
@@ -61,7 +58,7 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.border,
     gap: spacing.md,
   },
-  nombre: { fontSize: 13.5, fontWeight: '600', color: colors.ink },
-  email: { fontSize: 12, color: colors.inkSoft, marginTop: 1 },
-  meta: { fontSize: 11, color: colors.inkFaint },
+  nombre: { fontSize: 15, fontWeight: '600', color: colors.ink },
+  email: { fontSize: 13.5, color: colors.inkSoft, marginTop: 1 },
+  meta: { fontSize: 12.5, color: colors.inkFaint },
 });

@@ -1,4 +1,5 @@
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Screen, Subtitle, Title } from '../components/ui';
@@ -33,12 +34,12 @@ export default function TipoVisitaScreen({ navigation, route }: Props) {
 
   return (
     <Screen>
-      <Title>{tienda?.nombre ?? 'Tienda'}</Title>
+      <Title>¿Hay pedido?</Title>
       <Subtitle>¿La tienda hace un pedido de nuestros productos?</Subtitle>
 
       <Pressable style={styles.choice} onPress={() => elegir('venta')}>
         <View style={styles.icon}>
-          <Text>📦</Text>
+          <Ionicons name="cube-outline" size={22} color={colors.accent} />
         </View>
         <View style={{ flex: 1 }}>
           <Text style={styles.choiceTitle}>Con pedido</Text>
@@ -48,7 +49,7 @@ export default function TipoVisitaScreen({ navigation, route }: Props) {
 
       <Pressable style={styles.choice} onPress={() => elegir('mantencion')}>
         <View style={styles.icon}>
-          <Text>🔧</Text>
+          <Ionicons name="construct-outline" size={22} color={colors.accent} />
         </View>
         <View style={{ flex: 1 }}>
           <Text style={styles.choiceTitle}>Sin pedido</Text>
@@ -70,7 +71,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
     backgroundColor: colors.bgElevated,
   },
-  icon: { width: 36, height: 36, borderRadius: radius.sm, backgroundColor: colors.accentSoft, alignItems: 'center', justifyContent: 'center' },
-  choiceTitle: { fontWeight: '700', fontSize: 15, color: colors.ink, marginBottom: 2 },
-  choiceText: { fontSize: 12.5, color: colors.inkSoft, lineHeight: 17 },
+  icon: { width: 44, height: 44, borderRadius: radius.sm, backgroundColor: colors.accentSoft, alignItems: 'center', justifyContent: 'center' },
+  choiceTitle: { fontWeight: '700', fontSize: 16.5, color: colors.ink, marginBottom: 2 },
+  choiceText: { fontSize: 14, color: colors.inkSoft, lineHeight: 19 },
 });

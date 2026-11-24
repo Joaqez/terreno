@@ -38,12 +38,18 @@ export function Card({ children, style }: ViewProps) {
 export function Field({
   label,
   hint,
+  style,
   ...rest
 }: TextInputProps & { label: string; hint?: string }) {
   return (
     <View style={styles.field}>
       <Text style={styles.fieldLabel}>{label}</Text>
-      <TextInput placeholderTextColor={colors.inkFaint} style={styles.input} {...rest} />
+      {/* `style` se suma al del campo (antes lo reemplazaba y el campo quedaba sin borde). */}
+      <TextInput
+        placeholderTextColor={colors.inkFaint}
+        style={[styles.input, rest.multiline && styles.inputMultilinea, style]}
+        {...rest}
+      />
       {hint ? <Text style={styles.fieldHint}>{hint}</Text> : null}
     </View>
   );
@@ -89,7 +95,7 @@ export function GhostButton({ title, onPress }: { title: string; onPress: () => 
 
 export function TextLink({ title, onPress, tone = 'accent' }: { title: string; onPress: () => void; tone?: 'accent' | 'danger' }) {
   return (
-    <Pressable onPress={onPress} hitSlop={8}>
+    <Pressable onPress={onPress} hitSlop={8} style={styles.textLinkArea}>
       <Text style={[styles.textLink, tone === 'danger' && { color: colors.danger }]}>{title}</Text>
     </Pressable>
   );
@@ -118,7 +124,9 @@ const badgeTextTones = StyleSheet.create({
   danger: { color: colors.danger },
 });
 
-const typographySize = { xs: 12, sm: 13, md: 14.5, lg: 19, xl: 22 };
+// Más grande que el mockup para que se lea al sol (2026-11-23). `md` = 16
+// también evita que Safari en iPhone haga zoom al tocar un campo de texto.
+const typographySize = { xs: 13.5, sm: 14.5, md: 16, lg: 21, xl: 24 };
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
@@ -134,7 +142,7 @@ const styles = StyleSheet.create({
   },
   field: { marginBottom: spacing.lg },
   fieldLabel: {
-    fontSize: 12.5,
+    fontSize: 13.5,
     fontWeight: '600',
     color: colors.inkSoft,
     marginBottom: spacing.xs + 2,
@@ -151,11 +159,13 @@ const styles = StyleSheet.create({
     color: colors.ink,
     backgroundColor: colors.bgElevated,
   },
-  fieldHint: { fontSize: 12, color: colors.inkFaint, marginTop: 5 },
+  inputMultilinea: { minHeight: 80, textAlignVertical: 'top' },
+  fieldHint: { fontSize: 13.5, color: colors.inkFaint, marginTop: 5 },
   btnPrimary: {
     backgroundColor: colors.accent,
     borderRadius: radius.sm,
-    paddingVertical: 14,
+    minHeight: 48,
+    paddingVertical: 12,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -166,12 +176,16 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: radius.sm,
-    paddingVertical: 13,
+    minHeight: 48,
+    paddingVertical: 11,
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: colors.bgElevated,
   },
-  btnGhostText: { color: colors.inkSoft, fontWeight: '600', fontSize: typographySize.md },
-  textLink: { color: colors.accent, fontWeight: '600', fontSize: 13.5 },
+  btnGhostText: { color: colors.ink, fontWeight: '600', fontSize: typographySize.md },
+  // Alto mínimo de 44 px para que el link se pueda tocar con el dedo.
+  textLinkArea: { minHeight: 44, justifyContent: 'center' },
+  textLink: { color: colors.accent, fontWeight: '600', fontSize: 15 },
   badge: { paddingHorizontal: 9, paddingVertical: 4, borderRadius: radius.pill, alignSelf: 'flex-start' },
-  badgeText: { fontSize: 11, fontWeight: '700' },
+  badgeText: { fontSize: 12.5, fontWeight: '700' },
 });

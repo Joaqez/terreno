@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { colors, radius, spacing } from '../theme';
+import { avisar } from '../lib/avisos';
 import { useTerrenoStore } from '../lib/store';
 import { JefeTienda } from '../types';
 import { Field, PrimaryButton, TextLink } from './ui';
@@ -58,12 +59,14 @@ export default function JefeTiendaModal({
     } else {
       onGuardado?.(crearJefeTienda(tiendaId, datos));
     }
+    avisar(jefe ? 'Jefe de tienda actualizado' : `${nombre.trim()} agregado`);
     onCerrar();
   }
 
   function darDeBaja() {
     if (!jefe) return;
     darDeBajaJefeTienda(jefe.id);
+    avisar(`${jefe.nombre} dado de baja`);
     onCerrar();
   }
 
@@ -127,24 +130,27 @@ export default function JefeTiendaModal({
 const styles = StyleSheet.create({
   overlay: { flex: 1, backgroundColor: 'rgba(15,25,22,0.42)', justifyContent: 'flex-end' },
   sheet: {
+    width: '100%',
+    maxWidth: 760,
+    alignSelf: 'center',
     backgroundColor: colors.bgElevated,
     borderTopLeftRadius: radius.lg,
     borderTopRightRadius: radius.lg,
     padding: spacing.xl,
     maxHeight: '90%',
   },
-  titulo: { fontWeight: '700', fontSize: 16, marginBottom: spacing.lg, color: colors.ink },
+  titulo: { fontWeight: '700', fontSize: 17.5, marginBottom: spacing.lg, color: colors.ink },
   aviso: {
     backgroundColor: colors.amberSoft,
     color: colors.amber,
-    fontSize: 12.5,
+    fontSize: 14,
     borderRadius: radius.sm,
     padding: spacing.sm,
     marginTop: -spacing.sm,
     marginBottom: spacing.lg,
   },
   baja: { marginTop: spacing.lg, alignItems: 'center', gap: spacing.sm },
-  bajaTexto: { fontSize: 12.5, color: colors.inkSoft, textAlign: 'center' },
+  bajaTexto: { fontSize: 14, color: colors.inkSoft, textAlign: 'center' },
   bajaBoton: {
     backgroundColor: colors.dangerSoft,
     borderRadius: radius.sm,
@@ -153,7 +159,7 @@ const styles = StyleSheet.create({
     alignSelf: 'stretch',
     alignItems: 'center',
   },
-  bajaBotonTexto: { color: colors.danger, fontWeight: '700', fontSize: 13.5 },
+  bajaBotonTexto: { color: colors.danger, fontWeight: '700', fontSize: 15 },
   cancelar: { marginTop: spacing.md, alignItems: 'center', paddingVertical: spacing.sm },
   cancelarTexto: { color: colors.inkSoft, fontWeight: '600' },
 });

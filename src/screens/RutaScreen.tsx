@@ -1,16 +1,25 @@
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { Ionicons } from '@expo/vector-icons';
 import React, { useEffect, useMemo, useState } from 'react';
-import { FlatList, Linking, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { FlatList, Linking, Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Badge, Card, Field, PrimaryButton, Screen, Subtitle, TextLink, Title } from '../components/ui';
 import { colors, radius, spacing } from '../theme';
 import { calcularDistanciaKm } from '../lib/distancia';
 import { RADIO_VISITA_M, ResultadoRango, formatearMetros, tiendaSeVerifica, verificarRango } from '../lib/rangoVisita';
+import { avisar } from '../lib/avisos';
 import { useTerrenoStore } from '../lib/store';
 import { useUbicacionActual } from '../lib/useUbicacionActual';
 import { RootStackParamList } from '../navigation/types';
 import { FueraDeRango, Tienda, UbicacionVisita } from '../types';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Ruta'>;
+
+function normalizar(texto: string) {
+  return texto
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .toLowerCase();
+}
 
 export default function RutaScreen({ navigation }: Props) {
   const { tiendas, visitas, jornada, marcarGestionRapida, iniciarBorrador, actualizarBorrador } = useTerrenoStore();
@@ -28,6 +37,8 @@ export default function RutaScreen({ navigation }: Props) {
   const [verificandoId, setVerificandoId] = useState<string | null>(null);
   const [fuera, setFuera] = useState<{ tienda: Tienda; resultado: Extract<ResultadoRango, { ok: false }> } | null>(null);
   const [justificacion, setJustificacion] = useState('');
+  const [busqueda, setBusqueda] = useState('');
+  const [tiendaOpciones, setTiendaOpciones] = useState<Tienda | null>(null);
 
   // Bloqueo de visitas fuera de rango (2026-11-19, ver CLAUDE.md): antes de
   // empezar se pide una ubicación precisa; si está a más de 200 m (menos el
@@ -97,13 +108,22 @@ export default function RutaScreen({ navigation }: Props) {
   // real en la lista. Las ya visitadas van al final, en cualquier orden.
   const asignadasOrdenadas = [...pendientesOrdenadas, ...asignadas.filter((t) => visitadasIds.has(t.id))];
 
+  // Buscador (2026-11-23): con rutas largas (Benjamín tiene más de 70) es la
+  // forma rápida de encontrar una tienda. Filtra sin cambiar la numeración.
+  const palabras = normalizar(busqueda).split(/\s+/).filter(Boolean);
+  const coincide = (t: Tienda) =>
+    !palabras.length || palabras.every((w) => normalizar(`${t.nombre} ${t.direccion} ${t.comuna}`).includes(w));
+  const listaVisible = asignadasOrdenadas.filter(coincide);
+  const creadasVisibles = creadas.filter(coincide);
+  const mostrarBuscador = rutaTiendas.length > 8;
+
   function textoUbicacion() {
-    if (sinPermiso) return '📍 Sin permiso de ubicación: las distancias no son reales.';
-    if (!miUbicacion) return '📍 Buscando tu ubicación…';
+    if (sinPermiso) return 'Sin permiso de ubicación: las distancias no son reales.';
+    if (!miUbicacion) return 'Buscando tu ubicación…';
     const minutos = Math.max(0, Math.floor((ahora - miUbicacion.tomadaEn) / 60000));
     const hace = minutos === 0 ? 'recién' : `hace ${minutos} min`;
     const precision = miUbicacion.precisionM != null ? ` · ±${Math.round(miUbicacion.precisionM)} m` : '';
-    return `📍 Ubicación actualizada ${hace}${precision}`;
+    return `Ubicación actualizada ${hace}${precision}`;
   }
 
   async function abrirComoLlegar(app: 'waze' | 'maps') {
@@ -125,6 +145,7 @@ export default function RutaScreen({ navigation }: Props) {
   function confirmarRapida() {
     if (!tiendaRapida || motivoRapida.trim().length === 0) return;
     marcarGestionRapida(tiendaRapida.id, motivoRapida.trim());
+    avisar(`${tiendaRapida.nombre}: gestionada`);
     setTiendaRapida(null);
     setMotivoRapida('');
   }
@@ -139,7 +160,11 @@ export default function RutaScreen({ navigation }: Props) {
       <Card key={t.id} style={[styles.storeCard, orden === 1 && styles.storeCardNext]}>
         <View style={styles.storeTop}>
           <View style={[styles.storeIcon, orden ? { backgroundColor: colors.accent } : null]}>
-            <Text style={orden ? styles.storeIconOrderText : styles.storeIconText}>{orden ?? '🏬'}</Text>
+            {orden ? (
+              <Text style={styles.storeIconOrderText}>{orden}</Text>
+            ) : (
+              <Ionicons name={visitada ? 'checkmark' : 'storefront-outline'} size={18} color={colors.accent} />
+            )}
           </View>
           <View style={{ flex: 1 }}>
             <Text style={styles.storeName}>{t.nombre}</Text>
@@ -182,8 +207,16 @@ export default function RutaScreen({ navigation }: Props) {
                   {verificandoId === t.id ? 'Verificando ubicación…' : 'Iniciar visita'}
                 </Text>
               </Pressable>
+              {/* Lo menos usado ("gestionada sin visita") va en este menú para
+                  no repetir un link largo en cada tarjeta. */}
+              <Pressable
+                style={styles.btnMas}
+                onPress={() => setTiendaOpciones(t)}
+                accessibilityLabel="Más opciones"
+              >
+                <Ionicons name="ellipsis-horizontal" size={20} color={colors.ink} />
+              </Pressable>
             </View>
-            <TextLink title="Marcar como gestionada sin visita presencial" onPress={() => setTiendaRapida(t)} />
           </>
         )}
       </Card>
@@ -202,20 +235,48 @@ export default function RutaScreen({ navigation }: Props) {
       </Subtitle>
 
       <View style={styles.ubicacionFila}>
+        <Ionicons name="location-outline" size={16} color={sinPermiso ? colors.danger : colors.inkSoft} />
         <Text style={styles.ubicacionTexto}>{textoUbicacion()}</Text>
         {!sinPermiso ? <TextLink title={actualizando ? 'Actualizando…' : 'Actualizar'} onPress={actualizar} /> : null}
       </View>
 
+      {mostrarBuscador ? (
+        <TextInput
+          style={styles.buscador}
+          placeholder="Buscar tienda, calle o comuna"
+          placeholderTextColor={colors.inkFaint}
+          value={busqueda}
+          onChangeText={setBusqueda}
+        />
+      ) : null}
+
       <FlatList
-        data={[...asignadasOrdenadas, ...creadas]}
+        data={listaVisible}
         keyExtractor={(t) => t.id}
         renderItem={({ item }) => renderTienda(item)}
-        ListHeaderComponent={<Text style={styles.sectionLabel}>Tiendas asignadas</Text>}
+        keyboardShouldPersistTaps="handled"
+        ListHeaderComponent={
+          palabras.length ? null : (
+            <Text style={styles.sectionLabel}>
+              Tiendas asignadas · {asignadas.length - pendientesOrdenadas.length} de {asignadas.length} hechas
+            </Text>
+          )
+        }
+        ListEmptyComponent={
+          palabras.length && !creadasVisibles.length ? (
+            <Text style={styles.emptyHint}>Ninguna tienda de tu ruta coincide con la búsqueda.</Text>
+          ) : null
+        }
         ListFooterComponent={
-          <>
-            <Text style={styles.sectionLabel}>Visitas agregadas por ti</Text>
-            {creadas.length === 0 && <Text style={styles.emptyHint}>Aún no agregas visitas fuera de tu ruta asignada.</Text>}
-          </>
+          palabras.length && !creadasVisibles.length ? null : (
+            <>
+              <Text style={styles.sectionLabel}>Visitas agregadas por ti</Text>
+              {creadasVisibles.map((t) => renderTienda(t))}
+              {creadas.length === 0 && (
+                <Text style={styles.emptyHint}>Aún no agregas visitas fuera de tu ruta asignada.</Text>
+              )}
+            </>
+          )
         }
         contentContainerStyle={{ paddingBottom: 100 }}
       />
@@ -298,6 +359,28 @@ export default function RutaScreen({ navigation }: Props) {
         </View>
       </Modal>
 
+      {/* Modal: más opciones de una tienda */}
+      <Modal visible={!!tiendaOpciones} transparent animationType="slide" onRequestClose={() => setTiendaOpciones(null)}>
+        <View style={styles.sheetOverlay}>
+          <View style={styles.sheet}>
+            <Text style={styles.sheetTitle}>{tiendaOpciones?.nombre}</Text>
+            <Pressable
+              style={styles.sheetOption}
+              onPress={() => {
+                setTiendaRapida(tiendaOpciones);
+                setTiendaOpciones(null);
+              }}
+            >
+              <Text style={styles.sheetOptionText}>Marcar como gestionada sin visita presencial</Text>
+              <Text style={styles.sheetOptionHint}>Ej: hablaste por teléfono con el encargado.</Text>
+            </Pressable>
+            <Pressable onPress={() => setTiendaOpciones(null)} style={styles.sheetCerrar}>
+              <Text style={styles.sheetCerrarText}>Cerrar</Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
+
       {/* Modal: visita rápida */}
       <Modal visible={!!tiendaRapida} transparent animationType="slide" onRequestClose={() => setTiendaRapida(null)}>
         <View style={styles.sheetOverlay}>
@@ -326,13 +409,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    gap: spacing.sm,
+    gap: spacing.xs,
     marginTop: -spacing.sm,
     marginBottom: spacing.xs,
   },
-  ubicacionTexto: { fontSize: 12, color: colors.inkSoft, flex: 1 },
+  ubicacionTexto: { fontSize: 13.5, color: colors.inkSoft, flex: 1 },
   sectionLabel: {
-    fontSize: 12,
+    fontSize: 13.5,
     fontWeight: '700',
     color: colors.inkSoft,
     textTransform: 'uppercase',
@@ -340,23 +423,39 @@ const styles = StyleSheet.create({
     marginTop: spacing.lg,
     marginBottom: spacing.sm,
   },
-  emptyHint: { fontSize: 12.5, color: colors.inkFaint, borderWidth: 1, borderColor: colors.border, borderStyle: 'dashed', borderRadius: radius.md, padding: spacing.lg, textAlign: 'center' },
+  emptyHint: { fontSize: 14, color: colors.inkFaint, borderWidth: 1, borderColor: colors.border, borderStyle: 'dashed', borderRadius: radius.md, padding: spacing.lg, textAlign: 'center' },
   storeCard: { marginBottom: spacing.sm },
   storeCardNext: { borderColor: colors.accent },
   storeTop: { flexDirection: 'row', gap: spacing.md },
   storeIcon: { width: 36, height: 36, borderRadius: radius.sm, backgroundColor: colors.accentSoft, alignItems: 'center', justifyContent: 'center' },
-  storeIconText: { fontSize: 16 },
-  storeIconOrderText: { fontSize: 14, fontWeight: '700', color: colors.accentInk },
-  storeName: { fontWeight: '700', fontSize: 14.5, color: colors.ink },
-  storeAddr: { fontSize: 12.5, color: colors.inkSoft, marginTop: 1 },
+  storeIconText: { fontSize: 17.5 },
+  storeIconOrderText: { fontSize: 15.5, fontWeight: '700', color: colors.accentInk },
+  storeName: { fontWeight: '700', fontSize: 16, color: colors.ink },
+  storeAddr: { fontSize: 14, color: colors.inkSoft, marginTop: 1 },
   metaRow: { flexDirection: 'row', gap: 6, alignItems: 'center', marginTop: spacing.sm, flexWrap: 'wrap' },
-  dist: { fontSize: 11.5, color: colors.inkSoft },
-  motivo: { fontSize: 12, color: colors.inkFaint, fontStyle: 'italic', marginTop: 6 },
+  dist: { fontSize: 13, color: colors.inkSoft },
+  motivo: { fontSize: 13.5, color: colors.inkFaint, fontStyle: 'italic', marginTop: 6 },
   actionsRow: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.md },
-  btnGhostSm: { flex: 1, borderWidth: 1, borderColor: colors.border, borderRadius: radius.sm, paddingVertical: 10, alignItems: 'center' },
-  btnGhostSmText: { color: colors.inkSoft, fontWeight: '600', fontSize: 13 },
-  btnPrimarySm: { flex: 1, backgroundColor: colors.accent, borderRadius: radius.sm, paddingVertical: 10, alignItems: 'center' },
-  btnPrimarySmText: { color: colors.accentInk, fontWeight: '700', fontSize: 13 },
+  btnGhostSm: { flex: 1, borderWidth: 1, borderColor: colors.border, borderRadius: radius.sm, minHeight: 46, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.bgElevated },
+  btnGhostSmText: { color: colors.ink, fontWeight: '600', fontSize: 15 },
+  btnPrimarySm: { flex: 1.4, backgroundColor: colors.accent, borderRadius: radius.sm, minHeight: 46, alignItems: 'center', justifyContent: 'center', paddingHorizontal: spacing.sm },
+  btnPrimarySmText: { color: colors.accentInk, fontWeight: '700', fontSize: 15 },
+  btnMas: { width: 46, minHeight: 46, borderWidth: 1, borderColor: colors.border, borderRadius: radius.sm, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.bgElevated },
+  btnMasText: { color: colors.ink, fontWeight: '700', fontSize: 20, lineHeight: 22 },
+  buscador: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.sm,
+    paddingHorizontal: spacing.md,
+    minHeight: 46,
+    fontSize: 16,
+    color: colors.ink,
+    backgroundColor: colors.bgElevated,
+    marginTop: spacing.xs,
+  },
+  sheetOptionHint: { fontSize: 13.5, color: colors.inkSoft, marginTop: 2 },
+  sheetCerrar: { marginTop: spacing.sm, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
+  sheetCerrarText: { color: colors.inkSoft, fontWeight: '600', fontSize: 15.5 },
   fab: {
     position: 'absolute',
     right: spacing.lg,
@@ -368,11 +467,12 @@ const styles = StyleSheet.create({
   },
   fabText: { color: colors.accentInk, fontWeight: '700' },
   sheetOverlay: { flex: 1, backgroundColor: 'rgba(15,25,22,0.42)', justifyContent: 'flex-end' },
-  sheet: { backgroundColor: colors.bgElevated, borderTopLeftRadius: radius.lg, borderTopRightRadius: radius.lg, padding: spacing.xl },
-  sheetTitle: { fontWeight: '700', fontSize: 15.5, marginBottom: spacing.md, color: colors.ink },
-  errorText: { color: colors.danger, fontSize: 13, marginBottom: spacing.md },
-  fueraTexto: { fontSize: 13.5, color: colors.inkSoft, lineHeight: 19, marginTop: -spacing.sm },
-  fueraAviso: { fontSize: 11.5, color: colors.inkFaint, textAlign: 'center', marginTop: spacing.sm },
+  // En computador el panel de abajo no se estira de borde a borde.
+  sheet: { backgroundColor: colors.bgElevated, borderTopLeftRadius: radius.lg, borderTopRightRadius: radius.lg, padding: spacing.xl, width: '100%', maxWidth: 760, alignSelf: 'center' },
+  sheetTitle: { fontWeight: '700', fontSize: 17, marginBottom: spacing.md, color: colors.ink },
+  errorText: { color: colors.danger, fontSize: 14.5, marginBottom: spacing.md },
+  fueraTexto: { fontSize: 15, color: colors.inkSoft, lineHeight: 21, marginTop: -spacing.sm },
+  fueraAviso: { fontSize: 13, color: colors.inkFaint, textAlign: 'center', marginTop: spacing.sm },
   sheetOption: { paddingVertical: spacing.md, borderBottomWidth: 1, borderBottomColor: colors.border },
-  sheetOptionText: { fontWeight: '600', fontSize: 14, color: colors.ink },
+  sheetOptionText: { fontWeight: '600', fontSize: 15.5, color: colors.ink },
 });

@@ -144,6 +144,21 @@ real a 26 m). El 2026-11-19 se marcaron con `ubicacionPorConfirmar: true` las
 U. de los Andes, Gertrudis, Patagonia, Manquehue, Salida Norte, Piedra Roja,
 Lampa, Enea, Caren, Bilbao/Varas, Tobalaba Bilbao, Costanera E1/E2, Ruta 68,
 Fach Oriente, Lo Blanco, Puente Maipo Poniente). Se corrigen desde el panel:
+**Recalculadas con Google (2026-11-23):** las coordenadas de OpenStreetMap
+erraban hasta varios km en direcciones normales (ej. Blanche 2,3 km, Luis
+Pasteur Shell 2,8 km). Se geocodificaron las 223 con la **Google Geocoding
+API** (clave `GOOGLE_GEOCODING_API_KEY` en `.env`, nunca en el chat) y,
+**por regla del usuario, solo se tocaron las tiendas con dirección
+específica (calle + número)** — las de kilometraje, "s/n" o sin número
+quedaron tal cual. Se usó Google cuando encontró el número
+(`street_address`/`premise`, sin `partial_match`): 54 de Santiago y 29 de
+región; las con dirección específica que Google no ubicó bien quedaron
+"por confirmar" (10 de Santiago). Validado contra el GPS de visitas reales:
+Blanche 25 m, Laura de Neves 20 m (pero E0, por km, 1,9 km — por eso no se
+usa Google en direcciones por km). U. de los Andes quedó "por confirmar" a
+propósito (campus grande). Quedaron 21 tiendas de Santiago por confirmar.
+Respaldo de lo anterior: fuera del repo (scratchpad de la sesión).
+Se corrigen desde el panel:
 `AdminVisitaDetalleScreen` → "Usar esta ubicación como la de la tienda"
 (fija `lat`/`lng` con la ubicación del vendedor en esa visita y quita la
 marca, con lo que se activa el bloqueo). `AdminTiendaDetalleScreen` muestra
@@ -173,6 +188,9 @@ Dehesa, Shell La Dehesa y La Dehesa I, Cantagallo Aramco, U. de los Andes,
 Blanche, Laura de Neves, La Capitanía, Boulevard Nueva Las Condes,
 Hualtatas, Vitacura/Luis Pasteur Aramco, Luis Pasteur Shell, San Félix,
 Vitacura 7900). Quedó: Benjamín 73, Santiago 14, José Tomás 1 (E0).
+Ese mismo día se intercambiaron Las Condes / Cantagallo (Aramco,
+`aramco-9522`), que pasó de Santiago a Benjamín, y Chamisero (Shell,
+`shell-408`, Colina), que pasó de Benjamín a Santiago.
 
 Las tiendas **fuera de Santiago** ("de región") no se visitan nunca en
 persona — se hacen seguimiento por teléfono/WhatsApp/correo. Desde
@@ -238,8 +256,10 @@ consulta.
   confianza, esto hay que endurecerlo.
 - **`minimoDiario`**: la meta de tiendas a visitar por día, independiente de
   cuántas tiendas tenga asignadas un vendedor en total. `0` = sin fijar, y
-  en ese caso `HomeScreen`/`ResumenDiaScreen` usan el total de tiendas
-  `esMinima` como meta (mismo comportamiento de antes de este cambio).
+  en ese caso `HomeScreen`/`CierreDiaScreen`/`ResumenDiaScreen` usan como
+  meta las tiendas `esMinima` **asignadas a ese vendedor**
+  (`tiendasMinimasDe()` en `store.ts`; hasta 2026-11-23 contaban las 134 de
+  Santiago).
 - **Primer supervisor**: como no puede haber un huevo sin la gallina (nadie
   puede entrar al panel sin ser supervisor, y el panel es lo único que
   cambia el rol), la primera vez se hace con un script:
@@ -375,6 +395,58 @@ en texto (ej. "Hablé por teléfono con el encargado, todo en orden"). No pide
 fotos ni pregunta de stock. Esta gestión **cuenta para el mínimo de tiendas
 del día**, y se muestra distinta a una visita presencial (badge "Gestionada"
 en vez de "Visitada") tanto en la ruta como en el resumen del día.
+
+### Interfaz: navegación y legibilidad (2026-11-23)
+Revisión de UI/UX con el usuario; se priorizó en 4 tandas. Tandas 1 y 3
+(errores de navegación + legibilidad en terreno) hechas:
+- **Cada pantalla tiene su dirección** (`linking` en `RootNavigator.tsx`,
+  ej. `/ruta`, `/visita/pedido`, `/admin/visitas`) para que el botón atrás
+  del navegador y de Android funcione; antes la dirección era siempre `/` y
+  "atrás" sacaba de la app. Entrar por dirección a un paso de visita sin
+  visita en curso manda al inicio, y `FotoAntesScreen` ya no crea la visita
+  (la crea solo `RutaScreen` tras verificar la ubicación) — si no, se podía
+  saltar el bloqueo por distancia con el historial del navegador.
+- La ruta tiene "‹ Inicio" arriba; "Iniciar día" deja Inicio debajo de Ruta.
+- Cada paso de la visita tiene **"Cancelar"** arriba a la derecha
+  (`CancelarVisita.tsx`): confirma, bota el borrador sin guardar nada y
+  vuelve a la ruta.
+- El último paso ("Revisa y finaliza", `ObservacionesScreen`) muestra un
+  **resumen** (jefe, stock, pedido con productos, checklist, fotos) antes de
+  "Finalizar visita" — sobre todo por el pedido sugerido, que viene precargado.
+- Letra más grande (+1,5 px; campos de texto en 16 px, lo que además evita el
+  zoom automático de Safari al tocar un campo), `inkFaint` más oscuro para
+  que se lea al sol, y botones de al menos 44 px de alto.
+- Ruta: buscador cuando hay más de 8 tiendas; "Marcar como gestionada" pasó
+  al botón "⋯" de cada tarjeta. Región: "Listo" → "Registrar gestión".
+Tanda 2 (flujo de visita) también hecha:
+- **Barra de pasos** en la barra de arriba de cada paso (`ProgresoVisita.tsx`
+  + `src/lib/pasosVisita.ts`): nombre de la tienda + "Paso X de N". N cambia
+  según haya pedido (mientras no se elige, se cuenta) y checklist activo.
+  El título de cada pantalla es ahora el nombre del paso.
+- Productos en tienda y Pedido: el título y el buscador se desplazan con la
+  lista (antes quedaban fijos y se veían 2-3 productos).
+- **Pedido agrupado por línea** igual que el inventario (`agruparPorLinea()`),
+  con el sabor como nombre; avisos cortos ("No hay en la tienda", "Falta en
+  bodega").
+- Fotos: recuadro `CuadroFoto.tsx` con "Toca para tomar la foto" / "Toca
+  para repetir"; la foto de después muestra la de antes como referencia; si
+  se vuelve atrás, la foto ya tomada se conserva (sale del borrador).
+Tanda 4 (panel y pulido) también hecha:
+- En pantallas anchas la app queda centrada con **ancho máximo 760 px**
+  (`App.tsx`); los paneles de abajo (sheets) y la foto también se limitan.
+- **Avisos** ("Guardado", "No se pudo subir la foto"): `avisar(texto, tono)`
+  en `src/lib/avisos.ts`, se muestran con `Avisos.tsx` (montado una vez en
+  `App.tsx`). Usarlo en vez de texto suelto o `Alert.alert` (no-op en web)
+  cada vez que una acción guarda algo sin cambiar de pantalla.
+- Panel: `nombreVisible()` en `store.ts` muestra la parte antes de la @ si la
+  cuenta tiene el correo como nombre; el nombre real se corrige en
+  `AdminVendedorDetalleScreen` (campo "Nombre"). Las filas de visitas dicen
+  "· por <vendedor>" para no confundir a Santiago (vendedor) con la ciudad.
+- Sin "← Volver" duplicado (la flecha de la barra basta) ni títulos repetidos.
+- Íconos con `@expo/vector-icons` (Ionicons) en vez de emojis.
+- **Fuentes: se decidió mantener la del sistema** (San Francisco en iPhone,
+  Roboto en Android) en vez de Sora/Inter del mockup: se ve nativa, no hay
+  que descargarla y funciona sin señal.
 
 ### Cierre de día
 Al terminar, el vendedor confirma "Finalizar día" en `CierreDiaScreen` (sin

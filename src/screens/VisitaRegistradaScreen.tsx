@@ -1,4 +1,5 @@
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { Card, GhostButton, PrimaryButton, Screen } from '../components/ui';
@@ -18,7 +19,7 @@ export default function VisitaRegistradaScreen({ navigation, route }: Props) {
     <Screen>
       <View style={{ alignItems: 'center', marginTop: 24, marginBottom: 20 }}>
         <View style={styles.check}>
-          <Text style={{ fontSize: 26 }}>✓</Text>
+          <Ionicons name="checkmark" size={34} color={colors.success} />
         </View>
         <Text style={styles.title}>Visita registrada</Text>
         <Text style={styles.subtitle}>Tu bitácora fue guardada correctamente.</Text>
@@ -70,8 +71,8 @@ function Row({ k, v }: { k: string; v: string }) {
 const styles = StyleSheet.create({
   check: { width: 60, height: 60, borderRadius: 30, backgroundColor: colors.successSoft, alignItems: 'center', justifyContent: 'center', marginBottom: 12 },
   title: { fontSize: 19, fontWeight: '700', color: colors.ink },
-  subtitle: { fontSize: 13, color: colors.inkSoft, marginTop: 4 },
+  subtitle: { fontSize: 14.5, color: colors.inkSoft, marginTop: 4 },
   row: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 9, borderBottomWidth: 1, borderBottomColor: colors.border },
-  rowK: { color: colors.inkSoft, fontSize: 13.5 },
-  rowV: { fontWeight: '600', fontSize: 13.5, color: colors.ink },
+  rowK: { color: colors.inkSoft, fontSize: 15 },
+  rowV: { fontWeight: '600', fontSize: 15, color: colors.ink },
 });

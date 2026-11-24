@@ -3,7 +3,7 @@ import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { PrimaryButton, Screen, Subtitle, Title } from '../components/ui';
 import { colors, radius, spacing } from '../theme';
-import { useTerrenoStore } from '../lib/store';
+import { tiendasMinimasDe, useTerrenoStore } from '../lib/store';
 import { RootStackParamList } from '../navigation/types';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'CierreDia'>;
@@ -11,7 +11,7 @@ type Props = NativeStackScreenProps<RootStackParamList, 'CierreDia'>;
 export default function CierreDiaScreen({ navigation }: Props) {
   const { tiendas, visitas, vendedor, finalizarJornada } = useTerrenoStore();
 
-  const minimas = tiendas.filter((t) => t.esMinima);
+  const minimas = tiendasMinimasDe(tiendas, vendedor.id);
   const visitadasIds = new Set(visitas.map((v) => v.tiendaId));
   const visitadas = minimas.filter((t) => visitadasIds.has(t.id)).length;
   const metaDelDia = vendedor.minimoDiario > 0 ? vendedor.minimoDiario : minimas.length;
@@ -48,6 +48,6 @@ export default function CierreDiaScreen({ navigation }: Props) {
 const styles = StyleSheet.create({
   card: { backgroundColor: colors.bgElevated, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, padding: spacing.lg, marginBottom: spacing.lg },
   row: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 6 },
-  k: { color: colors.inkSoft, fontSize: 13.5 },
-  v: { fontWeight: '600', fontSize: 13.5, color: colors.ink },
+  k: { color: colors.inkSoft, fontSize: 15 },
+  v: { fontWeight: '600', fontSize: 15, color: colors.ink },
 });

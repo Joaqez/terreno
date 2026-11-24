@@ -4,12 +4,12 @@ import { FlatList, StyleSheet, Text, View } from 'react-native';
 import { Badge, Card, GhostButton, Screen, Subtitle, Title } from '../components/ui';
 import { colors, spacing } from '../theme';
 import { auth } from '../lib/firebase';
-import { useTerrenoStore } from '../lib/store';
+import { tiendasMinimasDe, useTerrenoStore } from '../lib/store';
 
 export default function ResumenDiaScreen() {
   const { tiendas, visitas, vendedor } = useTerrenoStore();
 
-  const minimas = tiendas.filter((t) => t.esMinima);
+  const minimas = tiendasMinimasDe(tiendas, vendedor.id);
   const visitadasIds = new Set(visitas.map((v) => v.tiendaId));
   const visitadas = minimas.filter((t) => visitadasIds.has(t.id)).length;
   const metaDelDia = vendedor.minimoDiario > 0 ? vendedor.minimoDiario : minimas.length;
@@ -89,10 +89,10 @@ function Stat({ num, lbl }: { num: string; lbl: string }) {
 const styles = StyleSheet.create({
   statGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' },
   statNum: { fontSize: 21, fontWeight: '700', color: colors.ink },
-  statLbl: { fontSize: 11.5, color: colors.inkSoft, marginTop: 2 },
-  sectionLabel: { fontSize: 12, fontWeight: '700', color: colors.inkSoft, textTransform: 'uppercase', letterSpacing: 0.4, marginTop: spacing.lg, marginBottom: spacing.sm },
+  statLbl: { fontSize: 13, color: colors.inkSoft, marginTop: 2 },
+  sectionLabel: { fontSize: 13.5, fontWeight: '700', color: colors.inkSoft, textTransform: 'uppercase', letterSpacing: 0.4, marginTop: spacing.lg, marginBottom: spacing.sm },
   visitRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 9, borderBottomWidth: 1, borderBottomColor: colors.border },
-  visitTxt: { fontSize: 13.5, color: colors.ink },
-  empty: { fontSize: 12.5, color: colors.inkFaint, textAlign: 'center', paddingVertical: spacing.lg },
-  pendientes: { marginTop: spacing.md, fontSize: 12.5, color: colors.amber, borderWidth: 1, borderColor: colors.amber, borderRadius: 12, padding: spacing.md },
+  visitTxt: { fontSize: 15, color: colors.ink },
+  empty: { fontSize: 14, color: colors.inkFaint, textAlign: 'center', paddingVertical: spacing.lg },
+  pendientes: { marginTop: spacing.md, fontSize: 14, color: colors.amber, borderWidth: 1, borderColor: colors.amber, borderRadius: 12, padding: spacing.md },
 });

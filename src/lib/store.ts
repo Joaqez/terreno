@@ -95,6 +95,30 @@ export function idJornadaDeHoy(vendedorId: string) {
   return `${vendedorId}_${fechaHoyChile()}`;
 }
 
+/** Tiendas mínimas asignadas a este vendedor (las de su "Ruta del día").
+ * Es la base del "X de Y" del inicio y del cierre: antes se contaban todas
+ * las tiendas mínimas de Santiago, no solo las del vendedor. */
+export function tiendasMinimasDe(tiendas: Tienda[], vendedorId: string) {
+  return tiendas.filter((t) => t.esMinima && t.vendedorAsignadoId === vendedorId);
+}
+
+/** Nombre de un vendedor para mostrar en el panel. Algunas cuentas tienen el
+ * correo como nombre (ej. "benjamin@…"): ahí se muestra lo de antes de la @,
+ * con mayúscula. El nombre real se corrige en el detalle del vendedor. */
+export function nombreVisible(v?: { nombre?: string; email?: string } | null, porDefecto = 'Vendedor') {
+  if (!v) return porDefecto;
+  const nombre = (v.nombre ?? '').trim();
+  if (nombre && !nombre.includes('@')) return nombre;
+  const base = (nombre || v.email || '').split('@')[0];
+  return base ? base.charAt(0).toUpperCase() + base.slice(1) : porDefecto;
+}
+
+/** Nombre para saludar: el primer nombre, o lo de antes de la @ si la cuenta
+ * todavía no tiene nombre puesto (`npm run set:nombre`). */
+export function primerNombre(nombre: string) {
+  return (nombre.includes('@') ? nombre.split('@')[0] : nombre).split(' ')[0];
+}
+
 /** Referencia a la suscripción en vivo de `tiendas`, para poder cortarla al
  * cerrar sesión (si no, un segundo login en el mismo dispositivo apilaría
  * un listener nuevo cada vez). */
@@ -152,6 +176,8 @@ interface TerrenoState {
   iniciarBorrador: (tiendaId: string) => void;
   actualizarBorrador: (cambios: Partial<BorradorVisita>) => void;
   finalizarBorrador: (observaciones?: string) => void;
+  /** "Cancelar visita": bota la visita a medias sin guardar nada. */
+  descartarBorrador: () => void;
 
   /** Panel de administración (solo para vendedor.rol === 'supervisor'). */
   cargarVendedores: () => Promise<void>;
@@ -498,6 +524,10 @@ export const useTerrenoStore = create<TerrenoState>((set, get) => ({
         ultimoInventario: { ...b.inventario, fecha: visita.horaFin, visitaId: visita.id, vendedorId: visita.vendedorId },
       });
     }
+    set({ borrador: null });
+  },
+
+  descartarBorrador: () => {
     set({ borrador: null });
   },
 

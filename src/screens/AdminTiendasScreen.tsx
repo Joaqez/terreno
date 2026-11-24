@@ -3,7 +3,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Badge, Field, Screen, Subtitle, TextLink, Title } from '../components/ui';
 import { colors, radius, spacing } from '../theme';
-import { useTerrenoStore } from '../lib/store';
+import { nombreVisible, useTerrenoStore } from '../lib/store';
 import { RootStackParamList } from '../navigation/types';
 import { Tienda } from '../types';
 
@@ -20,7 +20,10 @@ export default function AdminTiendasScreen({ navigation }: Props) {
     cargarVendedores();
   }, [cargarVendedores]);
 
-  const nombreVendedor = (id?: string) => vendedoresDisponibles.find((v) => v.id === id)?.nombre;
+  const nombreVendedor = (id?: string) => {
+    const v = vendedoresDisponibles.find((x) => x.id === id);
+    return v ? nombreVisible(v) : undefined;
+  };
 
   const filtradas = useMemo(() => {
     const q = busqueda.trim().toLowerCase();
@@ -48,9 +51,6 @@ export default function AdminTiendasScreen({ navigation }: Props) {
 
   return (
     <Screen>
-      <View style={{ marginBottom: spacing.sm }}>
-        <TextLink title="← Volver" onPress={() => navigation.goBack()} />
-      </View>
       <Title>Administración de tiendas</Title>
       <Subtitle>{filtradas.length} de {tiendas.length} tiendas</Subtitle>
 
@@ -91,7 +91,7 @@ const styles = StyleSheet.create({
   filtros: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.md },
   chip: { paddingHorizontal: 14, paddingVertical: 7, borderRadius: radius.pill, borderWidth: 1, borderColor: colors.border },
   chipActivo: { backgroundColor: colors.accent, borderColor: colors.accent },
-  chipTexto: { fontSize: 12.5, fontWeight: '600', color: colors.inkSoft },
+  chipTexto: { fontSize: 14, fontWeight: '600', color: colors.inkSoft },
   chipTextoActivo: { color: colors.accentInk },
   fila: {
     flexDirection: 'row',
@@ -102,7 +102,7 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.border,
     gap: spacing.md,
   },
-  nombre: { fontSize: 13.5, fontWeight: '600', color: colors.ink },
-  comuna: { fontSize: 12, color: colors.inkSoft, marginTop: 1 },
-  asignado: { fontSize: 11, color: colors.inkFaint },
+  nombre: { fontSize: 15, fontWeight: '600', color: colors.ink },
+  comuna: { fontSize: 13.5, color: colors.inkSoft, marginTop: 1 },
+  asignado: { fontSize: 12.5, color: colors.inkFaint },
 });

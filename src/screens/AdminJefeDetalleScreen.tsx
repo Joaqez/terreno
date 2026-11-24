@@ -6,7 +6,8 @@ import { Badge, Screen, Subtitle, TextLink, Title } from '../components/ui';
 import VisitaFila, { formatearFecha, formatearHora } from '../components/VisitaFila';
 import { colors, radius, spacing } from '../theme';
 import { linkCorreo, linkLlamar, linkWhatsApp } from '../lib/contacto';
-import { useTerrenoStore } from '../lib/store';
+import { avisar } from '../lib/avisos';
+import { nombreVisible, useTerrenoStore } from '../lib/store';
 import { RootStackParamList } from '../navigation/types';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'AdminJefeDetalle'>;
@@ -36,13 +37,12 @@ export default function AdminJefeDetalleScreen({ navigation, route }: Props) {
   if (!jefe) {
     return (
       <Screen>
-        <TextLink title="← Volver" onPress={() => navigation.goBack()} />
         <Title>Jefe de tienda no encontrado</Title>
       </Screen>
     );
   }
 
-  const nombreVendedor = (id?: string) => vendedoresDisponibles.find((v) => v.id === id)?.nombre ?? 'un vendedor';
+  const nombreVendedor = (id?: string) => nombreVisible(vendedoresDisponibles.find((v) => v.id === id), 'un vendedor');
   const acciones = [
     { texto: 'Llamar', url: linkLlamar(jefe.telefono) },
     { texto: 'WhatsApp', url: linkWhatsApp(jefe.telefono) },
@@ -51,9 +51,6 @@ export default function AdminJefeDetalleScreen({ navigation, route }: Props) {
 
   return (
     <Screen>
-      <View style={{ marginBottom: spacing.sm }}>
-        <TextLink title="← Volver" onPress={() => navigation.goBack()} />
-      </View>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }}>
         <Title>{jefe.nombre}</Title>
         <Subtitle>{tienda ? `${tienda.nombre} · ${tienda.comuna}` : 'Tienda eliminada'}</Subtitle>
@@ -100,7 +97,15 @@ export default function AdminJefeDetalleScreen({ navigation, route }: Props) {
 
         <View style={styles.links}>
           <TextLink title="Editar" onPress={() => setEditando(true)} />
-          {!jefe.activo ? <TextLink title="Reactivar" onPress={() => reactivarJefeTienda(jefe.id)} /> : null}
+          {!jefe.activo ? (
+            <TextLink
+              title="Reactivar"
+              onPress={() => {
+                reactivarJefeTienda(jefe.id);
+                avisar(`${jefe.nombre} reactivado`);
+              }}
+            />
+          ) : null}
           {tienda ? (
             <TextLink title="Ver tienda →" onPress={() => navigation.navigate('AdminTiendaDetalle', { tiendaId: tienda.id })} />
           ) : null}
@@ -113,7 +118,7 @@ export default function AdminJefeDetalleScreen({ navigation, route }: Props) {
               key={v.id}
               visita={v}
               titulo={formatearFecha(v.horaInicio)}
-              detalle={`${formatearHora(v.horaInicio)} · ${nombreVendedor(v.vendedorId)}`}
+              detalle={`${formatearHora(v.horaInicio)} · por ${nombreVendedor(v.vendedorId)}`}
               onPress={() => navigation.navigate('AdminVisitaDetalle', { visitaId: v.id })}
             />
           ))
@@ -139,14 +144,14 @@ function Linea({ etiqueta, valor }: { etiqueta: string; valor: string }) {
 const styles = StyleSheet.create({
   card: { backgroundColor: colors.bgElevated, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, padding: spacing.lg },
   linea: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 5, gap: spacing.md },
-  lineaEtiqueta: { fontSize: 13, color: colors.inkSoft },
-  lineaValor: { fontSize: 13, fontWeight: '600', color: colors.ink, flexShrink: 1, textAlign: 'right' },
+  lineaEtiqueta: { fontSize: 14.5, color: colors.inkSoft },
+  lineaValor: { fontSize: 14.5, fontWeight: '600', color: colors.ink, flexShrink: 1, textAlign: 'right' },
   acciones: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.md },
   accion: { flex: 1, backgroundColor: colors.accent, borderRadius: radius.sm, paddingVertical: 11, alignItems: 'center' },
-  accionTexto: { color: colors.accentInk, fontWeight: '700', fontSize: 13.5 },
+  accionTexto: { color: colors.accentInk, fontWeight: '700', fontSize: 15 },
   links: { flexDirection: 'row', gap: spacing.xl, marginTop: spacing.lg },
   etiqueta: {
-    fontSize: 12,
+    fontSize: 13.5,
     fontWeight: '700',
     color: colors.inkSoft,
     textTransform: 'uppercase',
@@ -154,5 +159,5 @@ const styles = StyleSheet.create({
     marginTop: spacing.xl,
     marginBottom: spacing.sm,
   },
-  meta: { fontSize: 12.5, color: colors.inkSoft },
+  meta: { fontSize: 14, color: colors.inkSoft },
 });

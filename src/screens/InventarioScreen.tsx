@@ -1,7 +1,7 @@
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import React, { useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { Field, PrimaryButton, Screen, Subtitle, Title } from '../components/ui';
+import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { PrimaryButton, Screen, Subtitle, Title } from '../components/ui';
 import { formatearFecha } from '../components/VisitaFila';
 import { colors, radius, spacing } from '../theme';
 import { agruparPorLinea, productosParaTienda } from '../lib/catalogo';
@@ -104,24 +104,32 @@ export default function InventarioScreen({ navigation, route }: Props) {
 
   return (
     <Screen>
-      <Title>Productos en tienda</Title>
-      <Subtitle>{tienda?.nombre} · marca lo que hay, sin cantidades</Subtitle>
-
-      {inicial.fechaPrecarga ? (
-        <Text style={styles.precarga}>
-          Precargado con lo que había el {formatearFecha(inicial.fechaPrecarga)}. Corrige lo que cambió.
-        </Text>
-      ) : null}
-
-      <Field label="Buscar producto" placeholder="Ej: meloso mango" value={busqueda} onChangeText={setBusqueda} />
-
-      <Casilla
-        texto="No pude revisar la bodega"
-        marcada={!bodegaRevisada}
-        onPress={() => setBodegaRevisada((r) => !r)}
-      />
-
+      {/* Todo lo de arriba se desplaza con la lista (2026-11-23): antes quedaba
+          fijo y en un celular se veían solo 2 o 3 productos. */}
       <ScrollView style={{ flex: 1 }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+        <Title>Productos en tienda</Title>
+        <Subtitle>Marca qué sabores hay en el exhibidor y en la bodega, sin cantidades.</Subtitle>
+
+        {inicial.fechaPrecarga ? (
+          <Text style={styles.precarga}>
+            Precargado con lo que había el {formatearFecha(inicial.fechaPrecarga)}. Corrige lo que cambió.
+          </Text>
+        ) : null}
+
+        <TextInput
+          style={styles.buscador}
+          placeholder="Buscar producto (ej: meloso mango)"
+          placeholderTextColor={colors.inkFaint}
+          value={busqueda}
+          onChangeText={setBusqueda}
+        />
+
+        <Casilla
+          texto="No pude revisar la bodega"
+          marcada={!bodegaRevisada}
+          onPress={() => setBodegaRevisada((r) => !r)}
+        />
+
         {visibles.map((linea) => {
           const ids = linea.items.map((i) => i.producto.id);
           return (
@@ -157,11 +165,15 @@ export default function InventarioScreen({ navigation, route }: Props) {
         <Text style={styles.resumen}>
           Exhibidor: {nExhibidor} · Bodega: {bodegaRevisada ? nBodega : 'no revisada'}
         </Text>
-        {nExhibidor === 0 ? (
-          <Casilla texto="El exhibidor está vacío" marcada={exhibidorVacio} onPress={() => setExhibidorVacio((v) => !v)} />
-        ) : null}
-        {bodegaRevisada && nBodega === 0 ? (
-          <Casilla texto="La bodega está vacía" marcada={bodegaVacia} onPress={() => setBodegaVacia((v) => !v)} />
+        {nExhibidor === 0 || (bodegaRevisada && nBodega === 0) ? (
+          <View style={styles.vaciosFila}>
+            {nExhibidor === 0 ? (
+              <Casilla texto="Exhibidor vacío" marcada={exhibidorVacio} onPress={() => setExhibidorVacio((v) => !v)} />
+            ) : null}
+            {bodegaRevisada && nBodega === 0 ? (
+              <Casilla texto="Bodega vacía" marcada={bodegaVacia} onPress={() => setBodegaVacia((v) => !v)} />
+            ) : null}
+          </View>
         ) : null}
         <PrimaryButton title="Continuar" disabled={!exhibidorListo || !bodegaLista} onPress={continuar} />
       </View>
@@ -208,7 +220,7 @@ function Toggle({ texto, activo, onPress }: { texto: string; activo: boolean; on
 
 function AccionLinea({ texto, onPress }: { texto: string; onPress: () => void }) {
   return (
-    <Pressable onPress={onPress} hitSlop={6}>
+    <Pressable onPress={onPress} hitSlop={6} style={{ minHeight: 40, justifyContent: 'center' }}>
       <Text style={styles.accionLinea}>{texto}</Text>
     </Pressable>
   );
@@ -229,15 +241,15 @@ const styles = StyleSheet.create({
   precarga: {
     backgroundColor: colors.accentSoft,
     color: colors.ink,
-    fontSize: 12.5,
+    fontSize: 14,
     borderRadius: radius.sm,
     padding: spacing.sm,
     marginBottom: spacing.md,
   },
   linea: { marginBottom: spacing.lg },
-  lineaTitulo: { fontSize: 13, fontWeight: '700', color: colors.ink, textTransform: 'uppercase', letterSpacing: 0.3 },
+  lineaTitulo: { fontSize: 14.5, fontWeight: '700', color: colors.ink, textTransform: 'uppercase', letterSpacing: 0.3 },
   lineaAcciones: { flexDirection: 'row', gap: spacing.lg, marginTop: 4, marginBottom: spacing.xs },
-  accionLinea: { color: colors.accent, fontWeight: '600', fontSize: 12.5 },
+  accionLinea: { color: colors.accent, fontWeight: '600', fontSize: 14 },
   fila: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -248,20 +260,24 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.border,
   },
   filaMarcada: { backgroundColor: colors.accentSoft },
-  sabor: { fontSize: 13.5, fontWeight: '600', color: colors.ink },
-  sku: { fontSize: 11, color: colors.inkFaint, marginTop: 1 },
+  sabor: { fontSize: 15, fontWeight: '600', color: colors.ink },
+  sku: { fontSize: 12.5, color: colors.inkFaint, marginTop: 1 },
   toggle: {
     borderWidth: 1.5,
     borderColor: colors.border,
     borderRadius: radius.sm,
-    paddingHorizontal: 10,
-    paddingVertical: 7,
+    // Alto de 44 para el dedo y ancho fijo: al marcar aparece "✓" y antes
+    // el botón cambiaba de tamaño y se corría el de al lado.
+    minHeight: 44,
+    width: 96,
+    alignItems: 'center',
+    justifyContent: 'center',
     backgroundColor: colors.bgElevated,
   },
   toggleActivo: { backgroundColor: colors.accent, borderColor: colors.accent },
-  toggleTexto: { fontSize: 12, fontWeight: '700', color: colors.inkSoft },
+  toggleTexto: { fontSize: 13.5, fontWeight: '700', color: colors.inkSoft },
   toggleTextoActivo: { color: colors.accentInk },
-  casilla: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: 6 },
+  casilla: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, minHeight: 44 },
   caja: {
     width: 22,
     height: 22,
@@ -272,9 +288,21 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   cajaMarcada: { backgroundColor: colors.accent, borderColor: colors.accent },
-  cajaCheck: { color: colors.accentInk, fontWeight: '800', fontSize: 13 },
-  casillaTexto: { fontSize: 13.5, color: colors.ink, fontWeight: '600' },
+  cajaCheck: { color: colors.accentInk, fontWeight: '800', fontSize: 14.5 },
+  casillaTexto: { fontSize: 15, color: colors.ink, fontWeight: '600' },
   vacio: { color: colors.inkSoft, textAlign: 'center', marginTop: spacing.xl, paddingHorizontal: spacing.lg },
+  buscador: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.sm,
+    paddingHorizontal: spacing.md,
+    minHeight: 46,
+    fontSize: 16,
+    color: colors.ink,
+    backgroundColor: colors.bgElevated,
+    marginBottom: spacing.xs,
+  },
+  vaciosFila: { flexDirection: 'row', justifyContent: 'center', flexWrap: 'wrap', columnGap: spacing.xl },
   pie: { paddingTop: spacing.md, borderTopWidth: 1, borderTopColor: colors.border, gap: spacing.xs },
-  resumen: { fontSize: 13, fontWeight: '600', color: colors.ink, textAlign: 'center' },
+  resumen: { fontSize: 14.5, fontWeight: '600', color: colors.ink, textAlign: 'center' },
 });
