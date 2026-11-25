@@ -22,7 +22,8 @@ function normalizar(texto: string) {
 }
 
 export default function RutaScreen({ navigation }: Props) {
-  const { tiendas, visitas, jornada, marcarGestionRapida, iniciarBorrador, actualizarBorrador } = useTerrenoStore();
+  const { tiendas, visitas, jornada, vendedor, marcarGestionRapida, iniciarBorrador, actualizarBorrador } = useTerrenoStore();
+  const vendedorId = vendedor.id;
   const { ubicacion: miUbicacion, actualizando, sinPermiso, actualizar } = useUbicacionActual();
   // Re-render cada 30 s para que "hace X min" no quede congelado.
   const [ahora, setAhora] = useState(Date.now());
@@ -89,12 +90,18 @@ export default function RutaScreen({ navigation }: Props) {
     return t.distanciaKm;
   }
 
-  const rutaTiendas = (jornada?.tiendaIds ?? [])
-    .map((id) => tiendas.find((t) => t.id === id))
-    .filter((t): t is Tienda => !!t);
-
-  const asignadas = rutaTiendas.filter((t) => t.esMinima);
-  const creadas = rutaTiendas.filter((t) => !t.esMinima);
+  // Ruta en vivo (2026-11-25): las tiendas mínimas se arman desde la asignación
+  // actual (`tiendas` llega por onSnapshot), no desde la copia que guardó
+  // "Iniciar día" en `jornada.tiendaIds`. Así una tienda asignada o quitada
+  // desde el panel a mitad del día aparece/desaparece sola. Las ya visitadas
+  // hoy se quedan aunque se hayan reasignado. Las creadas con "Nueva visita"
+  // siguen saliendo de `jornada.tiendaIds`.
+  const enJornada = new Set(jornada?.tiendaIds ?? []);
+  const asignadas = tiendas.filter(
+    (t) => t.esMinima && (t.vendedorAsignadoId === vendedorId || visitadasIds.has(t.id))
+  );
+  const creadas = tiendas.filter((t) => !t.esMinima && enJornada.has(t.id));
+  const rutaTiendas = [...asignadas, ...creadas];
 
   // Orden sugerido simple: pendientes ordenadas por distancia ascendente.
   const pendientesOrdenadas = [...asignadas]

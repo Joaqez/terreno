@@ -181,6 +181,14 @@ nuevo, "Santiago"/`shpereznova@gmail.com`; 87 a Benjamín); las 29 restantes
 se habían importado a Firestore— siguen sin `vendedorAsignadoId`, así que
 hoy no le aparecen a nadie en "Ruta del día" hasta que se asignen desde el
 panel de administración.
+**Ruta en vivo (2026-11-25):** `RutaScreen` ya no arma la ruta con la copia
+`jornada.tiendaIds` que guarda "Iniciar día", sino con la asignación actual
+(`tiendas` llega por `onSnapshot`): tiendas `esMinima` asignadas al vendedor
+**más** las que ya visitó/gestionó hoy aunque se hayan reasignado, más las
+creadas con "Nueva visita" (estas sí salen de `tiendaIds`). Así, asignar o
+quitar una tienda desde el panel a mitad del día se ve al instante en ambos
+vendedores, sin recargar ni tocar la jornada. `tiendaIds` queda como registro
+de con qué empezó el día.
 **Reasignación 2026-11-23** (pedido del usuario): Santiago dejó todas sus
 Copec (14, quedaron **sin asignar** a propósito) y recibió 14 Aramco/Shell
 de Las Condes, Vitacura y Lo Barnechea que eran de Benjamín (Portal La
@@ -191,6 +199,13 @@ Vitacura 7900). Quedó: Benjamín 73, Santiago 14, José Tomás 1 (E0).
 Ese mismo día se intercambiaron Las Condes / Cantagallo (Aramco,
 `aramco-9522`), que pasó de Santiago a Benjamín, y Chamisero (Shell,
 `shell-408`, Colina), que pasó de Benjamín a Santiago.
+**2026-11-25:** a Santiago le quedaron **solo 2 tiendas**: Stand Alone
+Parque Arauco (`aramco-7458`) y Stand Alone Providencia 2501
+(`aramco-7495`), ambas antes de Benjamín. Sus otras 14 (las de Vitacura,
+Las Condes, Lo Barnechea y Chamisero) quedaron **sin asignar** a propósito.
+Benjamín quedó con 71. Ese mismo día el usuario le asignó desde el panel
+Chicureo (Aramco, `aramco-9308`) y Chamisero (Shell, `shell-408`), y se
+agregaron a su jornada ya iniciada (`tiendaIds`) para que las viera ese día.
 
 Las tiendas **fuera de Santiago** ("de región") no se visitan nunca en
 persona — se hacen seguimiento por teléfono/WhatsApp/correo. Desde
